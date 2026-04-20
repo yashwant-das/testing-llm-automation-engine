@@ -46,7 +46,7 @@ What sets this autonomous agent apart from standard test automation tools?
 
 - **Automated Test Generation**: Analyzes DOM structures to generate robust Playwright TypeScript test suites.
 - **Vision Agent**: Uses vision-capable LLMs (e.g., Qwen-VL) to understand UI from screenshots.
-- **Self-Healing**: Automatically fixes broken tests by analyzing error logs and updating selectors.
+- **Self-Healing**: Automatically fixes broken tests by analyzing error logs and updating selectors. Supports sequential multi-step healing via the **Max Healing Attempts** configuration.
 - **Enhanced Heuristics**: Deterministically identifies network errors, JavaScript runtime errors, and locator drift.
 - **Customizable Prompts**: All LLM system instructions are externalized in the `prompts/` directory for easy tweaking.
 - **Input Validation**: Comprehensive validation for URLs, file paths, and user inputs.
@@ -168,7 +168,6 @@ Go to `http://127.0.0.1:7860` to generate, run, and heal tests.
 <img width="2022" height="1324" alt="Screenshot 2026-01-30 at 10 40 38 PM" src="https://github.com/user-attachments/assets/c9a93fd7-c931-4738-a416-4568a6936932" />
 <img width="2022" height="1324" alt="Screenshot 2026-01-30 at 10 42 47 PM" src="https://github.com/user-attachments/assets/d4ba59bb-1fed-41a2-9758-0765800f1aa4" />
 
-
 ### Running Agents Individually
 
 ```bash
@@ -207,7 +206,7 @@ python -m src.agents.healer tests/generated/broken_example.spec.ts
 
 - **Input**: A broken test file like `broken_example.spec.ts`.
 - **Command**: `python -m src.agents.healer tests/generated/broken_example.spec.ts`
-- **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs.
+- **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs. Handles cascading fixes for multiple subsequent errors through a configurable **Max Healing Attempts** parameter.
 - **Deep Dive**: See [HEALING_SCENARIOS.md](docs/HEALING_SCENARIOS.md) for a detailed breakdown of how the agent resolves specific failures like Locator Drift, Network Flakiness, and Race Conditions.
 - **Trial**: To see it in action, purposefully introduce mistakes into the locator IDs or button names in the script and watch the agent heal them!
 

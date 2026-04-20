@@ -212,6 +212,13 @@ with gr.Blocks(title="Autonomous Test Repair System") as demo:
                     h_file_in = gr.File(
                         label="Test File", file_types=[".ts"], file_count="single"
                     )
+                    h_max_retries_in = gr.Slider(
+                        minimum=1,
+                        maximum=5,
+                        value=3,
+                        step=1,
+                        label="Max Healing Attempts",
+                    )
                     h_btn = gr.Button("Heal Test", variant="primary")
                     h_timeline_out = gr.Markdown("### ⏱️ Timeline will appear here...")
 
@@ -285,7 +292,7 @@ with gr.Blocks(title="Autonomous Test Repair System") as demo:
                 except Exception as e:
                     return {"error": str(e)}, f"Error reading artifacts: {str(e)}"
 
-            def wrap_healer(file_obj):
+            def wrap_healer(file_obj, max_retries):
                 """Handle file upload from Gradio and attempt to heal the test file.
 
                 Copies the uploaded file to a local directory, triggers the healing pipeline,
@@ -312,7 +319,9 @@ with gr.Blocks(title="Autonomous Test Repair System") as demo:
                     shutil.copy(file_path, validated_path)
 
                     # 1. Run Healing
-                    result_text = attempt_healing(validated_path)
+                    result_text = attempt_healing(
+                        validated_path, max_retries=int(max_retries)
+                    )
 
                     # 2. Fetch Artifacts
                     decision, timeline = get_latest_artifacts()
@@ -325,7 +334,7 @@ with gr.Blocks(title="Autonomous Test Repair System") as demo:
 
             h_btn.click(
                 fn=wrap_healer,
-                inputs=[h_file_in],
+                inputs=[h_file_in, h_max_retries_in],
                 outputs=[h_result_out, h_decision_out, h_timeline_out],
             )
 
