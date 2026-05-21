@@ -1,6 +1,6 @@
 # Environment Variables
 
-This document describes all environment variables used by the Autonomous Test Repair System.
+This document describes all environment variables used by the Testing LLM Repair Engine.
 
 ## Configuration
 

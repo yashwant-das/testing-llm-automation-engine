@@ -2,7 +2,7 @@ import os
 
 
 def setup_demo():
-    print("🚀 Setting up Autonomous Test Repair System Demo...")
+    print("🚀 Setting up Testing LLM Repair Engine Demo...")
 
     # 1. content
     test_content = """

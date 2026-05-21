@@ -2,7 +2,7 @@
 FROM mcr.microsoft.com/playwright/python:v1.57.0-noble
 
 LABEL maintainer="QA Team" \
-      description="Autonomous Test Repair System"
+      description="Testing LLM Repair Engine"
 
 WORKDIR /app
 

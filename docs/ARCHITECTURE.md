@@ -1,6 +1,6 @@
 # Architecture & Design
 
-> **Single Source of Truth** for the Autonomous Test Repair System.
+> **Single Source of Truth** for the Testing LLM Repair Engine.
 > Last Updated: January 2026 (Phase 4 Complete)
 
 ## 1. Problem Statement

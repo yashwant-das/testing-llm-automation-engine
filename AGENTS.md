@@ -14,7 +14,7 @@
 - `npm run format` auto-formats JS via Prettier and Python via Black/Isort; run before lint or staging changes.
 - `npm run test` executes the Playwright suite defined in `playwright.config.ts` and deposits reports under `playwright-report/`.
 - `npm run test:unit` runs the Python `tests/unit_test_*.py` modules so heuristics and helpers stay covered.
-- Docker: `docker build -t autonomoustestrepairsystem .` followed by `docker run -p 7860:7860 --name autonomoustestrepairsystem ...` mirrors production (see `DOCKER.md`).
+- Docker: `docker build -t testingllmrepairengine .` followed by `docker run -p 7860:7860 --name testingllmrepairengine ...` mirrors production (see `DOCKER.md`).
 
 ## Coding Style & Naming Conventions
 

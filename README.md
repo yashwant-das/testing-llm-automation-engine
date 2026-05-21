@@ -1,4 +1,4 @@
-# Autonomous Test Repair System
+# Testing LLM Repair Engine
 
 > **An Intelligent, Self-Healing, and Explainable Automated QA System**
 
@@ -22,7 +22,7 @@ Many existing AI-based solutions operate as "black boxes," automatically patchin
 
 ## Solution Overview
 
-The **Autonomous Test Repair System** is an intelligent agent designed to reduce test maintenance overhead through automated diagnosis and remediation. It emulates senior-level QA capabilities by executing a four-stage pipeline:
+The **Testing LLM Repair Engine** is an intelligent agent designed to reduce test maintenance overhead through automated diagnosis and remediation. It emulates senior-level QA capabilities by executing a four-stage pipeline:
 
 1. **Investigate**: Captures high-fidelity evidence (logs, DOM trees, screenshots) during test execution.
 2. **Diagnose**: Utilizes **Deterministic Heuristics** for instant identification of common failures (timeouts, network errors) and **LLM Analysis** for complex logic.
@@ -110,26 +110,26 @@ The easiest way to run the application is using Docker.
 
 ```bash
 # Build the Docker image
-docker build -t autonomoustestrepairsystem .
+docker build -t testingllmrepairengine .
 
 # Run the container
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e LLM_PROVIDER="lm_studio" \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 **Or with Ollama:**
 
 ```bash
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   -e OLLAMA_URL="http://host.docker.internal:11434/v1" \
   -e LLM_PROVIDER="ollama" \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 Access the Gradio interface at `http://localhost:7860`. See [DOCKER.md](DOCKER.md) for more info.

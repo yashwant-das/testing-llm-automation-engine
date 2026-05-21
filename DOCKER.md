@@ -1,6 +1,6 @@
 # Docker Workflow Guide
 
-This guide covers building and running the Autonomous Test Repair System in Docker, including manual debugging and healing workflows.
+This guide covers building and running the Testing LLM Repair Engine in Docker, including manual debugging and healing workflows.
 
 ## Prerequisites
 
@@ -13,10 +13,10 @@ This guide covers building and running the Autonomous Test Repair System in Dock
 Build the Docker image with the following command:
 
 ```bash
-docker build -t autonomoustestrepairsystem .
+docker build -t testingllmrepairengine .
 ```
 
-This creates a Docker image named `autonomoustestrepairsystem` using the `Dockerfile` in the project root.
+This creates a Docker image named `testingllmrepairengine` using the `Dockerfile` in the project root.
 
 ## Running the Container
 
@@ -26,11 +26,11 @@ Run the container with port mapping to access the Gradio UI:
 
 ```bash
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 Access the Gradio interface at `http://localhost:7860`.
@@ -44,12 +44,12 @@ If you have a `.env` file, mount it:
 
 ```bash
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 ### With Volume Mount (For Development)
@@ -58,13 +58,13 @@ Mount the `tests/generated` directory to edit files on your host and see changes
 
 ```bash
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
   -v "$(pwd)/tests/generated:/app/tests/generated" \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 ### Run with Ollama
@@ -73,12 +73,12 @@ Run the container using Ollama as the provider (Ollama must be running on your h
 
 ```bash
 docker run -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   -e LLM_PROVIDER="ollama" \
   -e OLLAMA_URL="http://host.docker.internal:11434/v1" \
   -e PYTHONUNBUFFERED=1 \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 ## Manual Debugging & Healing Workflow
@@ -91,13 +91,13 @@ Run the Docker container with a volume mount to enable file editing from your ho
 
 ```bash
 docker run -d -p 7860:7860 \
-  --name autonomoustestrepairsystem \
+  --name testingllmrepairengine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
   -v "$(pwd)/tests/generated:/app/tests/generated" \
-  autonomoustestrepairsystem
+  testingllmrepairengine
 ```
 
 The `-d` flag runs the container in detached mode, and `--name` assigns a name for easier reference.
@@ -115,7 +115,7 @@ Get a command-line interface inside the container:
 2. **Open the Shell:**
 
    ```bash
-   docker exec -it autonomoustestrepairsystem /bin/bash
+   docker exec -it testingllmrepairengine /bin/bash
    ```
 
    Or use the container ID:
@@ -156,7 +156,7 @@ Copy the Playwright HTML report from the container to your host machine:
 
 ```bash
 # Syntax: docker cp <ContainerName>:<PathInside> <PathOnHost>
-docker cp autonomoustestrepairsystem:/app/playwright-report ./playwright-report
+docker cp testingllmrepairengine:/app/playwright-report ./playwright-report
 ```
 
 **View the Report:**
@@ -189,31 +189,31 @@ python -m src.agents.healer tests/generated/broken_example.spec.ts
 ### Stop the Container
 
 ```bash
-docker stop autonomoustestrepairsystem
+docker stop testingllmrepairengine
 ```
 
 ### Start a Stopped Container
 
 ```bash
-docker start autonomoustestrepairsystem
+docker start testingllmrepairengine
 ```
 
 ### Remove the Container
 
 ```bash
-docker rm autonomoustestrepairsystem
+docker rm testingllmrepairengine
 ```
 
 ### View Container Logs
 
 ```bash
-docker logs autonomoustestrepairsystem
+docker logs testingllmrepairengine
 ```
 
 ### Follow Logs in Real-Time
 
 ```bash
-docker logs -f autonomoustestrepairsystem
+docker logs -f testingllmrepairengine
 ```
 
 ## Troubleshooting
@@ -235,7 +235,7 @@ If you encounter permission errors with mounted volumes, adjust file permissions
 Check logs for errors:
 
 ```bash
-docker logs autonomoustestrepairsystem
+docker logs testingllmrepairengine
 ```
 
 ### Port Already in Use

@@ -1,5 +1,5 @@
 {
-  "name": "autonomous-test-repair-system",
+  "name": "testing-llm-repair-engine",
   "version": "1.0.0",
   "description": "A modular, LLM-powered QA automation agent that generates and maintains Playwright tests",
   "scripts": {
