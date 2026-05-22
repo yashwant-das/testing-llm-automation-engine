@@ -43,6 +43,6 @@
 
 ## Key Architectural Highlights
 
-- **Explainability**: "I explicitly designed the system to output its internal chain of thought as JSON artifacts."
+- **Explainability**: "I explicitly designed the system to output evidence, reasoning summaries, code changes, and verification results as JSON artifacts."
 - **Hybrid Intelligence**: "I balanced deterministic code (Regex) with probabilistic AI (LLM) to maximize speed and accuracy."
 - **Full-Stack Quality**: "The project enforces Node.js and Python best practices via automated pre-commit hooks."

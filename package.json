@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "description": "A modular, LLM-powered QA automation agent that generates and maintains Playwright tests",
   "scripts": {
-    "test": "npx playwright test",
+    "test": "npx playwright test tests/generated/framework_smoke.spec.ts",
+    "test:demo": "npx playwright test tests/generated/broken_example.spec.ts",
     "test:unit": "export PYTHONPATH=$PYTHONPATH:$(pwd) && python3 -m unittest discover -v -s tests -p 'unit_test_*.py'",
     "prepare": "husky",
     "husky": "husky",

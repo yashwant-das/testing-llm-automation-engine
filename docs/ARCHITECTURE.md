@@ -1,7 +1,7 @@
 # Architecture & Design
 
 > **Single Source of Truth** for the Testing LLM Automation Engine.
-> Last Updated: January 2026 (Phase 4 Complete)
+> Last Updated: May 2026
 
 ## 1. Problem Statement
 
@@ -11,7 +11,7 @@ Automated test healing is often a "black box." When a test breaks and is automat
 2. _Why_ did the agent choose this specific fix?
 3. _Can I trust_ that this fix is correct and not just a lucky guess?
 
-The current system repairs tests but fails to explain its reasoning. It lacks **explainability**, **intent-awareness**, and **provenance**.
+Many repair systems can patch tests without explaining their reasoning. They lack **explainability**, **intent-awareness**, and **provenance**.
 
 **The Goal:** Build a system where every automated repair is accompanied by a structured `HealingDecision` that provides evidence, reasoning, and verification proof.
 
@@ -53,15 +53,15 @@ The Healer Agent operates in a strict, explainable pipeline:
 
 1. **Failure Detection (Monitor)**
    - Runs the test via Playwright.
-   - Parses logs for errors (`TimeoutError`, `TargetClosedError`, `AssertionError`, `404/500`, `ReferenceError`).
-   - **Evidence Gathering**: Automatically scans `test-results/` for the latest screenshot to provide visual context to the LLM.
+   - Parses logs for errors (`TimeoutError`, `TargetClosedError`, assertion output, `404/500`, `ReferenceError`, `TypeError`).
+   - **Evidence Gathering**: Automatically scans `test-results/` for the latest screenshot path and records it in the artifact when Playwright captured one.
 
 2. **Deterministic Classification (Heuristics)**
    - **Regex Layer**: Matches logs against known failure patterns (including network and JS errors).
    - **Confidence Score**: Assigns 1.0 (Heuristic match) or <1.0 (LLM hypothesis).
 
 3. **LLM Reasoning (Investigate & Reason)**
-   - Consults LLM only for complex failures or to refine a heuristic diagnosis.
+   - Consults the LLM with the failing code, error logs, and heuristic diagnosis so it can confirm or refine the failure type.
    - Generates a **Hypothesis** and **Action Plan**.
 
 4. **Remediation (Act)**
@@ -74,7 +74,7 @@ The Healer Agent operates in a strict, explainable pipeline:
 
 6. **UI Surfacing (Visualize)**
    - Emits JSON artifacts to `tests/artifacts/`.
-   - **Gradio Dashboard** reads these to render a live **Execution Timeline** and **Decision Inspector**.
+   - **Gradio Dashboard** reads these to render an **Execution Timeline** and **Decision Inspector** after each healing run.
 
 ---
 
@@ -85,7 +85,7 @@ The Healer Agent operates in a strict, explainable pipeline:
 3. **Professional Pipeline**:
    - **JS/TS**: Linted with ESLint 9 (Playwright plugin) and formatted with Prettier.
    - **Python**: Linted with Flake8 and formatted with Black/isort.
-   - **Enforcement**: Husky pre-commit hooks ensure 0-lint-error code is never committed.
+   - **Enforcement**: Husky pre-commit hooks run lint-staged checks before commits in local development.
 
 ## 5. Confidence Score Calculation
 
@@ -110,4 +110,4 @@ To ensure this project remains maintainable and professional, we've implemented 
   - **TypeScript**: `eslint` (v9 Flat Config) with the Playwright plugin for best practices.
   - **Documentation**: `markdownlint-cli2` ensures all docs follow GFM standards.
 - **Git Hooks (Husky)**: Every `git commit` triggers a `pre-commit` hook that runs `lint-staged`. This prevents malformed or unformatted code from entering the repository.
-- **Explainability First**: Every agent interaction is logged and output as a structured JSON artifact, ensuring that AI decisions are never a "black box."
+- **Explainability First**: Healing runs produce structured JSON artifacts with evidence, reasoning summaries, code changes, and verification results.

@@ -2,7 +2,7 @@
 
 > **An LLM-powered QA automation framework for Playwright test generation, visual UI understanding, and self-healing maintenance**
 
-[![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Playwright](https://img.shields.io/badge/Playwright-1.57%2B-2EAD33?logo=playwright&logoColor=white)](https://playwright.dev/)
 [![Gradio](https://img.shields.io/badge/Gradio-6.2%2B-FF6B6B?logo=gradio&logoColor=white)](https://gradio.app/)
@@ -36,9 +36,11 @@ What sets this framework apart from standard test automation tools?
 
 - **Lifecycle Coverage**: Supports initial test generation, vision-assisted test creation, execution, and automated maintenance in one workflow.
 - **Dual Generation Modes**: Combines DOM-driven generation for structured pages with screenshot-driven generation for visually rich interfaces.
-- **Transparent Healing**: Every fix includes a `HealingDecision` JSON artifact, allowing you to trace exactly why a specific change was made.
+- **Transparent Healing**: Every fix includes a `HealingDecision` JSON artifact, allowing you to trace the evidence, diagnosis, confidence, code patch, and verification result behind a repair.
 - **Hybrid Diagnosis**: Combines **Deterministic Heuristics** (Regex) for instant, low-cost error detection with **LLM Reasoning** for complex failures.
-- **Production-Ready Toolchain**: Ships with a proven quality control pipeline (ESLint 9, Flake8, Husky, lint-staged) to ensure maintainable, industry-standard code.
+- **Verified Repair Loop**: Runs failing specs, plans a patch, applies it with exact/fuzzy code matching, re-runs the test, and retries bounded healing attempts when the first fix exposes another issue.
+- **Local-First LLM Support**: Works with OpenAI-compatible local providers such as LM Studio and Ollama for both text/code and vision models.
+- **Developer-Ready Toolchain**: Ships with ESLint 9, Flake8, Black, isort, Markdownlint, Husky, and lint-staged scripts so generated and handwritten code can be checked consistently.
 
 ---
 
@@ -46,20 +48,20 @@ What sets this framework apart from standard test automation tools?
 
 - **Automated Test Generation**: Analyzes DOM structures to generate robust Playwright TypeScript test suites.
 - **Vision Agent**: Uses vision-capable LLMs (e.g., Qwen-VL) to understand UI from screenshots.
-- **Self-Healing**: Automatically fixes broken tests by analyzing error logs and updating selectors. Supports sequential multi-step healing via the **Max Healing Attempts** configuration.
+- **Self-Healing**: Automatically diagnoses failing tests, proposes a patch, applies it, verifies the result, and supports sequential multi-step healing via the **Max Healing Attempts** configuration.
 - **Enhanced Heuristics**: Deterministically identifies network errors, JavaScript runtime errors, and locator drift.
 - **Customizable Prompts**: All LLM system instructions are externalized in the `prompts/` directory for easy tweaking.
-- **Input Validation**: Comprehensive validation for URLs, file paths, and user inputs.
+- **Input Validation**: URL shape validation, generated-test path restrictions, description length limits, and dangerous-character checks for user inputs.
 - **Interactive Dashboard**: Centralized Gradio interface for managing test generation, vision context, and healing operations.
 
 ---
 
 ## Confidence Scoring System
 
-The agent assigns a **Confidence Score (0.0 - 1.0)** to every diagnosis to facilitate risk assessment:
+The healer records a **Confidence Score (0.0 - 1.0)** in every `HealingDecision` to facilitate risk assessment:
 
 - **1.0 (Deterministic)**: The failure matched a verified pattern (e.g., specific error codes). No probabilistic reasoning involved.
-- **0.8 - 0.9 (High)**: The LLM identified the root cause with strong evidence from logs and code context.
+- **0.8 - 0.9 (High)**: The diagnosis is backed by strong log patterns or LLM reasoning from the failing code and Playwright output.
 - **< 0.7 (Low)**: The failure is ambiguous; the agent is proposing a "best-guess" fix that requires human review.
 
 ---
@@ -84,7 +86,7 @@ The agent assigns a **Confidence Score (0.0 - 1.0)** to every diagnosis to facil
 ├── prompts/             # Externalized LLM system instructions (.md)
 ├── docs/                # Extended documentation
 │   ├── ARCHITECTURE.md  # Deep dive into the agentic pipeline
-│   ├── DEMO_GUIDE.md    # Scripted guide for a killing demo
+│   ├── DEMO_GUIDE.md    # Scripted guide for a focused demo
 │   └── HEALING_SCENARIOS.md # Story-driven examples of healing logic
 ├── tests/
 │   ├── unit_test_*.py   # Logic & heuristic unit tests
@@ -216,7 +218,7 @@ python -m src.agents.healer tests/generated/broken_example.spec.ts
 
 ### Environment Variables
 
-See [ENV_VARIABLES.md](ENV_VARIABLES.md) for full documentation on `LM_STUDIO_URL`, `DEFAULT_MODEL`, etc.
+See [ENV_VARIABLES.md](ENV_VARIABLES.md) for full documentation on `LLM_PROVIDER`, `LM_STUDIO_MODEL`, `OLLAMA_MODEL`, vision model settings, and provider URLs.
 
 ### Customizable Prompts
 
@@ -227,9 +229,11 @@ Edit the files in `prompts/` to tweak agent behavior without changing code:
 ### Development Commands
 
 ```bash
-npm run lint      # Run all quality checks
+npm run test      # Run the normal Playwright smoke suite
+npm run test:demo # Run the intentionally broken self-healing demo spec
+npm run lint      # Run JS, Python, and Markdown checks
 npm run test:unit # Run Python unit tests
-npm run format    # Auto-format all code
+npm run format    # Auto-format JS and Python code
 ```
 
 ### Tooling Stack
@@ -243,9 +247,9 @@ npm run format    # Auto-format all code
 
 ## Security
 
-- Input validation prevents malicious URLs and path traversal.
-- File operations restricted to allowed directories.
-- Subprocess calls use proper sanitization.
+- URL validation accepts only `http` and `https` URLs with a valid host and length limit.
+- Test-file operations are restricted to `tests/generated/` to reduce path traversal risk.
+- Playwright subprocess calls pass argument lists instead of shell strings, avoiding shell interpolation.
 
 ---
 

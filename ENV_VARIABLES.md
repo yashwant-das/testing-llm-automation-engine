@@ -14,11 +14,17 @@ LM_STUDIO_URL=http://localhost:1234/v1
 # API Key for LM Studio (default: lm-studio)
 LM_STUDIO_API_KEY=lm-studio
 
-# Default model name for text generation (default: local-model)
-DEFAULT_MODEL=local-model
+# Text/code model name for LM Studio
+LM_STUDIO_MODEL=qwen/qwen3-coder-30b
 
-# Vision model name for image analysis (default: local-model)
-VISION_MODEL=local-model
+# Vision model name for LM Studio
+LM_STUDIO_VISION_MODEL=qwen/qwen3-vl-30b
+
+# Optional Ollama-compatible configuration
+LLM_PROVIDER=lm_studio
+OLLAMA_URL=http://localhost:11434/v1
+OLLAMA_MODEL=qwen3-coder:latest
+OLLAMA_VISION_MODEL=qwen3-vl:30b
 ```
 
 ## Variable Descriptions
