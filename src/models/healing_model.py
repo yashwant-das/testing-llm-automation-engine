@@ -71,7 +71,7 @@ class HealingDecision:
         return f"""
 # Healing Report: {self.timestamp}
 **File:** `{self.test_file}`
-**Status:** {emoji} {'Fixed' if self.verification_passed else 'Failed'}
+**Status:** {emoji} {"Fixed" if self.verification_passed else "Failed"}
 
 ## Diagnosis
 - **Type:** `{self.failure_type.value}`

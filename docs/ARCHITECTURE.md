@@ -84,7 +84,7 @@ The Healer Agent operates in a strict, explainable pipeline:
 2. **Structured Data:** All decisions follow strict JSON schemas (see `src/models/healing_model.py`).
 3. **Professional Pipeline**:
    - **JS/TS**: Linted with ESLint 9 (Playwright plugin) and formatted with Prettier.
-   - **Python**: Linted with Flake8 and formatted with Black/isort.
+   - **Python**: Linted and formatted with Ruff.
    - **Enforcement**: Husky pre-commit hooks run lint-staged checks before commits in local development.
 
 ## 5. Confidence Score Calculation
@@ -106,7 +106,7 @@ Scores are preserved in the `HealingDecision` artifact for auditability.
 To ensure this project remains maintainable and professional, we've implemented a robust "Pre-flight" pipeline:
 
 - **Strict Linting**:
-  - **Python**: `flake8` for style, `black` for formatting, and `isort` for import organization.
+  - **Python**: `ruff` for ultra-fast linting, import sorting, and formatting.
   - **TypeScript**: `eslint` (v9 Flat Config) with the Playwright plugin for best practices.
   - **Documentation**: `markdownlint-cli2` ensures all docs follow GFM standards.
 - **Git Hooks (Husky)**: Every `git commit` triggers a `pre-commit` hook that runs `lint-staged`. This prevents malformed or unformatted code from entering the repository.

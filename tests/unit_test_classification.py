@@ -5,7 +5,6 @@ from src.models.healing_model import FailureType
 
 
 class TestFailureClassification(unittest.TestCase):
-
     def test_timeout(self):
         logs = "TimeoutError: page.goto: Timeout 30000ms exceeded."
         f_type, conf, reason = classify_failure_heuristic(logs)

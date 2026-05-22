@@ -10,16 +10,16 @@
 ## Build, Test, and Development Commands
 
 - `npm install` + `npx playwright install` provision the JS toolchain before running any tests.
-- `npm run lint` (runs JS, Py, and Markdown linting) ensures ESLint/Prettier, Flake8, and Markdownlint agree before committing.
-- `npm run format` auto-formats JS via Prettier and Python via Black/Isort; run before lint or staging changes.
+- `npm run lint` (runs JS, Py, and Markdown linting) ensures ESLint/Prettier, Ruff (linter), and Markdownlint agree before committing.
+- `npm run format` auto-formats JS via Prettier and Python via Ruff (formatting & import sorting); run before lint or staging changes.
 - `npm run test` executes the Playwright suite defined in `playwright.config.ts` and deposits reports under `playwright-report/`.
-- `npm run test:unit` runs the Python `tests/unit_test_*.py` modules so heuristics and helpers stay covered.
+- `npm run test:unit` runs the Python `tests/unit_test_*.py` modules inside a `uv` sandbox so heuristics and helpers stay covered.
 - Docker: `docker build -t testing-llm-automation-engine .` followed by `docker run -p 7860:7860 --name testing-llm-automation-engine ...` mirrors production (see `DOCKER.md`).
 
 ## Coding Style & Naming Conventions
 
 - JavaScript/TypeScript follows the Flat Config ESLint setup with 2-space indentation and Prettier formatting; run `npm run lint:js` or let Husky/lint-staged auto-fix staged files.
-- Python code uses Black (88 char line, automatic string quoting) and Isort for imports; Flake8 guards for unused symbols.
+- Python code uses Ruff for linting, import sorting, and formatting (88 char line, double quotes). All commands should run using `uv run`.
 - Markdown files should pass `markdownlint-cli2`; keep section headers consistent with sentence case (see README structure).
 - Naming patterns: Python tests start with `unit_test_`, generated TypeScript specs land under `tests/generated/`, and healing artifacts are under `tests/artifacts/` for easy discovery.
 

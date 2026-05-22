@@ -28,10 +28,13 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
+# Install uv for high-performance dependency management
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+
 # Install Python dependencies with cache mount
-COPY requirements.txt .
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --no-cache-dir -r requirements.txt
+COPY pyproject.toml uv.lock ./
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --frozen --no-cache
 
 # Copy configuration files
 COPY playwright.config.ts tsconfig.json ./
@@ -42,4 +45,4 @@ COPY prompts/ ./prompts/
 
 EXPOSE 7860
 
-CMD ["python", "src/app.py"]
+CMD ["uv", "run", "src/app.py"]

@@ -172,7 +172,7 @@ If a test fails, invoke the Healer agent manually to fix the code:
 **Inside the Docker Shell:**
 
 ```bash
-python -m src.agents.healer tests/generated/broken_example.spec.ts
+uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
 ```
 
 **Expected Workflow:**

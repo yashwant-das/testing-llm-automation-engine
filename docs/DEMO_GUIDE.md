@@ -10,7 +10,7 @@
 2. **Generate a "Dirty" Test**:
 
    ```bash
-   python scripts/setup_demo.py
+   uv run python scripts/setup_demo.py
    ```
 
    _This creates `tests/generated/demo_broken.spec.ts` with an intentional locator bug._

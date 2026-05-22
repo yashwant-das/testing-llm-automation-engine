@@ -5,16 +5,16 @@
   "scripts": {
     "test": "npx playwright test tests/generated/framework_smoke.spec.ts",
     "test:demo": "npx playwright test tests/generated/broken_example.spec.ts",
-    "test:unit": "export PYTHONPATH=$PYTHONPATH:$(pwd) && python3 -m unittest discover -v -s tests -p 'unit_test_*.py'",
+    "test:unit": "export PYTHONPATH=$PYTHONPATH:$(pwd) && uv run python -m unittest discover -v -s tests -p 'unit_test_*.py'",
     "prepare": "husky",
     "husky": "husky",
     "lint": "npm run lint:js && npm run lint:py && npm run lint:md",
     "format": "npm run format:js && npm run format:py",
     "lint:js": "eslint .",
-    "lint:py": "python3 -m flake8 .",
+    "lint:py": "uv run ruff check .",
     "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\"",
     "format:js": "prettier --write .",
-    "format:py": "python3 -m black . && python3 -m isort ."
+    "format:py": "uv run ruff format . && uv run ruff check --select I --fix ."
   },
   "lint-staged": {
     "*.{js,cjs,ts}": [
@@ -22,9 +22,8 @@
       "eslint --fix"
     ],
     "*.py": [
-      "bash -c 'python3 -m black \"$0\" || ./.venv/bin/black \"$0\"'",
-      "bash -c 'python3 -m isort \"$0\" || ./.venv/bin/isort \"$0\"'",
-      "bash -c 'python3 -m flake8 \"$0\" || ./.venv/bin/flake8 \"$0\"'"
+      "uv run ruff format",
+      "uv run ruff check --select I --fix"
     ],
     "*.md": [
       "markdownlint-cli2"

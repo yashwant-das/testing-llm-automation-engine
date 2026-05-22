@@ -10,7 +10,6 @@ from src.models.healing_model import (
 
 
 class TestFixApplication(unittest.TestCase):
-
     def test_fuzzy_match_whitespace(self):
         current_code = """
         // comment

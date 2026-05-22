@@ -1,10 +1,13 @@
 import unittest
 
-from src.utils.validation import validate_description, sanitize_for_shell, ValidationError
+from src.utils.validation import (
+    ValidationError,
+    sanitize_for_shell,
+    validate_description,
+)
 
 
 class TestValidation(unittest.TestCase):
-
     def test_valid_description(self):
         """Test that valid descriptions pass validation."""
         desc = "Login with standard_user and secret_sauce"

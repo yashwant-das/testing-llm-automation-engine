@@ -40,7 +40,7 @@ What sets this framework apart from standard test automation tools?
 - **Hybrid Diagnosis**: Combines **Deterministic Heuristics** (Regex) for instant, low-cost error detection with **LLM Reasoning** for complex failures.
 - **Verified Repair Loop**: Runs failing specs, plans a patch, applies it with exact/fuzzy code matching, re-runs the test, and retries bounded healing attempts when the first fix exposes another issue.
 - **Local-First LLM Support**: Works with OpenAI-compatible local providers such as LM Studio and Ollama for both text/code and vision models.
-- **Developer-Ready Toolchain**: Ships with ESLint 9, Flake8, Black, isort, Markdownlint, Husky, and lint-staged scripts so generated and handwritten code can be checked consistently.
+- **Developer-Ready Toolchain**: Ships with ESLint 9, Ruff, Markdownlint, Husky, and lint-staged scripts so generated and handwritten code can be checked consistently.
 
 ---
 
@@ -140,6 +140,14 @@ Access the Gradio interface at `http://localhost:7860`. See [DOCKER.md](DOCKER.m
 
 1. **Install Python Dependencies** (Python 3.11+ recommended):
 
+   Using `uv` (recommended):
+
+   ```bash
+   uv sync
+   ```
+
+   Or standard `pip`:
+
    ```bash
    pip install -r requirements.txt
    ```
@@ -161,7 +169,7 @@ Access the Gradio interface at `http://localhost:7860`. See [DOCKER.md](DOCKER.m
 ### Launch the UI
 
 ```bash
-python src/app.py
+uv run python src/app.py
 ```
 
 Go to `http://127.0.0.1:7860` to generate, run, and heal tests.
@@ -173,7 +181,7 @@ Go to `http://127.0.0.1:7860` to generate, run, and heal tests.
 ### Running Agents Individually
 
 ```bash
-python -m src.agents.healer tests/generated/broken_example.spec.ts
+uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
 ```
 
 ---
@@ -207,7 +215,7 @@ python -m src.agents.healer tests/generated/broken_example.spec.ts
 ### 5. Self-Healer
 
 - **Input**: A broken test file like `broken_example.spec.ts`.
-- **Command**: `python -m src.agents.healer tests/generated/broken_example.spec.ts`
+- **Command**: `uv run python -m src.agents.healer tests/generated/broken_example.spec.ts`
 - **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs. Handles cascading fixes for multiple subsequent errors through a configurable **Max Healing Attempts** parameter.
 - **Deep Dive**: See [HEALING_SCENARIOS.md](docs/HEALING_SCENARIOS.md) for a detailed breakdown of how the agent resolves specific failures like Locator Drift, Network Flakiness, and Race Conditions.
 - **Trial**: To see it in action, purposefully introduce mistakes into the locator IDs or button names in the script and watch the agent heal them!
@@ -239,7 +247,7 @@ npm run format    # Auto-format JS and Python code
 ### Tooling Stack
 
 - **TypeScript/JS**: Prettier + ESLint (v9 Flat Config) + Playwright Plugin
-- **Python**: Black + isort + Flake8
+- **Python**: Ruff (ultra-fast linting, import sorting, and formatting)
 - **Documentation**: Markdownlint
 - **Automation**: Husky (Git Hooks) + lint-staged
 

@@ -4,7 +4,6 @@ from src.utils.llm import extract_json_block
 
 
 class TestJsonExtraction(unittest.TestCase):
-
     def test_clean_json(self):
         text = '{"foo": "bar"}'
         self.assertEqual(extract_json_block(text), text)
