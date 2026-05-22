@@ -1,6 +1,6 @@
-# Testing LLM Repair Engine
+# Testing LLM Automation Engine
 
-> **An Intelligent, Self-Healing, and Explainable Automated QA System**
+> **An LLM-powered QA automation framework for Playwright test generation, visual UI understanding, and self-healing maintenance**
 
 [![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9%2B-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -12,33 +12,33 @@
 
 ## Problem Statement
 
-Modern QA automation faces significant scalability challenges. When tests fail, engineering teams invest substantial time analyzing logs to distinguish between:
+Modern QA automation faces significant scalability challenges across the full test lifecycle:
 
-1. **Application Defects**: Genuine regressions or bugs.
-2. **Environment Issues**: Network latency or service unavailability.
-3. **Test Flakiness**: Locator drift or race conditions.
+1. **Test Creation**: Writing reliable browser tests from user stories and page context is repetitive and time-consuming.
+2. **UI Understanding**: DOM-only inspection can miss visual layout, labels, and interaction cues that humans rely on.
+3. **Test Maintenance**: Failing tests require teams to separate application defects, environment issues, locator drift, and flaky timing.
 
-Many existing AI-based solutions operate as "black boxes," automatically patching code without providing insight into the decision-making process. **This lack of explainability inhibits trust and complicates long-term maintenance.**
+Many existing AI-based QA tools focus on only one part of this lifecycle or operate as "black boxes" without clear evidence for generated or repaired tests. **This lack of lifecycle coverage and explainability inhibits trust and complicates long-term maintenance.**
 
 ## Solution Overview
 
-The **Testing LLM Repair Engine** is an intelligent agent designed to reduce test maintenance overhead through automated diagnosis and remediation. It emulates senior-level QA capabilities by executing a four-stage pipeline:
+The **Testing LLM Automation Engine** is an intelligent QA framework designed to automate Playwright workflows across three complementary capabilities:
 
-1. **Investigate**: Captures high-fidelity evidence (logs, DOM trees, screenshots) during test execution.
-2. **Diagnose**: Utilizes **Deterministic Heuristics** for instant identification of common failures (timeouts, network errors) and **LLM Analysis** for complex logic.
-3. **Reason**: Synthesizes evidence to formulate a remediation plan, documented in a structured JSON artifact.
-4. **Act & Explain**: Applies the fix and generates a detailed **Execution Timeline**, proving the validity of the change.
+1. **Generate from DOM Context**: Uses a text/code LLM to create Playwright TypeScript tests from URLs, page structure, and user scenarios.
+2. **Generate from Visual Context**: Uses a vision-capable LLM to interpret screenshots and produce tests when visual UI cues matter.
+3. **Heal Existing Tests**: Diagnoses failing Playwright specs, proposes repairs, applies fixes, and records evidence-backed healing artifacts.
 
 ---
 
 ## Key Differentiators
 
-What sets this autonomous agent apart from standard test automation tools?
+What sets this framework apart from standard test automation tools?
 
-- **Transparent Reasoning**: Every fix includes a `HealingDecision` JSON artifact, allowing you to trace exactly why a specific change was made.
-- **Hybrid Architecture**: Combines **Deterministic Heuristics** (Regex) for instant, low-cost error detection with **LLM Reasoning** for complex logic, optimizing both speed and cost.
+- **Lifecycle Coverage**: Supports initial test generation, vision-assisted test creation, execution, and automated maintenance in one workflow.
+- **Dual Generation Modes**: Combines DOM-driven generation for structured pages with screenshot-driven generation for visually rich interfaces.
+- **Transparent Healing**: Every fix includes a `HealingDecision` JSON artifact, allowing you to trace exactly why a specific change was made.
+- **Hybrid Diagnosis**: Combines **Deterministic Heuristics** (Regex) for instant, low-cost error detection with **LLM Reasoning** for complex failures.
 - **Production-Ready Toolchain**: Ships with a proven quality control pipeline (ESLint 9, Flake8, Husky, lint-staged) to ensure maintainable, industry-standard code.
-- **Multimodal Analysis**: When DOM scraping falls short, the **Vision Agent** analyzes screenshots to understand UI layout and context, mimicking human visual verification.
 
 ---
 
@@ -110,26 +110,26 @@ The easiest way to run the application is using Docker.
 
 ```bash
 # Build the Docker image
-docker build -t testingllmrepairengine .
+docker build -t testing-llm-automation-engine .
 
 # Run the container
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e LLM_PROVIDER="lm_studio" \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 **Or with Ollama:**
 
 ```bash
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   -e OLLAMA_URL="http://host.docker.internal:11434/v1" \
   -e LLM_PROVIDER="ollama" \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 Access the Gradio interface at `http://localhost:7860`. See [DOCKER.md](DOCKER.md) for more info.

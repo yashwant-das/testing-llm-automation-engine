@@ -1,6 +1,6 @@
 # Environment Variables
 
-This document describes all environment variables used by the Testing LLM Repair Engine.
+This document describes all environment variables used by the Testing LLM Automation Engine.
 
 ## Configuration
 

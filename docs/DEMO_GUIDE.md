@@ -1,4 +1,4 @@
-# Product Demo Guide: Testing LLM Repair Engine
+# Product Demo Guide: Testing LLM Automation Engine
 
 > Follow this script to showcase the "Senior QA Engineer" intelligence of this agent in under 3 minutes.
 

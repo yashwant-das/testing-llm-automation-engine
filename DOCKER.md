@@ -1,6 +1,6 @@
 # Docker Workflow Guide
 
-This guide covers building and running the Testing LLM Repair Engine in Docker, including manual debugging and healing workflows.
+This guide covers building and running the Testing LLM Automation Engine in Docker, including manual debugging and healing workflows.
 
 ## Prerequisites
 
@@ -13,10 +13,10 @@ This guide covers building and running the Testing LLM Repair Engine in Docker, 
 Build the Docker image with the following command:
 
 ```bash
-docker build -t testingllmrepairengine .
+docker build -t testing-llm-automation-engine .
 ```
 
-This creates a Docker image named `testingllmrepairengine` using the `Dockerfile` in the project root.
+This creates a Docker image named `testing-llm-automation-engine` using the `Dockerfile` in the project root.
 
 ## Running the Container
 
@@ -26,11 +26,11 @@ Run the container with port mapping to access the Gradio UI:
 
 ```bash
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 Access the Gradio interface at `http://localhost:7860`.
@@ -44,12 +44,12 @@ If you have a `.env` file, mount it:
 
 ```bash
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 ### With Volume Mount (For Development)
@@ -58,13 +58,13 @@ Mount the `tests/generated` directory to edit files on your host and see changes
 
 ```bash
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
   -v "$(pwd)/tests/generated:/app/tests/generated" \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 ### Run with Ollama
@@ -73,12 +73,12 @@ Run the container using Ollama as the provider (Ollama must be running on your h
 
 ```bash
 docker run -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   -e LLM_PROVIDER="ollama" \
   -e OLLAMA_URL="http://host.docker.internal:11434/v1" \
   -e PYTHONUNBUFFERED=1 \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 ## Manual Debugging & Healing Workflow
@@ -91,13 +91,13 @@ Run the Docker container with a volume mount to enable file editing from your ho
 
 ```bash
 docker run -d -p 7860:7860 \
-  --name testingllmrepairengine \
+  --name testing-llm-automation-engine \
   --add-host=host.docker.internal:host-gateway \
   --env-file .env \
   -e LM_STUDIO_URL="http://host.docker.internal:1234/v1" \
   -e PYTHONUNBUFFERED=1 \
   -v "$(pwd)/tests/generated:/app/tests/generated" \
-  testingllmrepairengine
+  testing-llm-automation-engine
 ```
 
 The `-d` flag runs the container in detached mode, and `--name` assigns a name for easier reference.
@@ -115,7 +115,7 @@ Get a command-line interface inside the container:
 2. **Open the Shell:**
 
    ```bash
-   docker exec -it testingllmrepairengine /bin/bash
+   docker exec -it testing-llm-automation-engine /bin/bash
    ```
 
    Or use the container ID:
@@ -156,7 +156,7 @@ Copy the Playwright HTML report from the container to your host machine:
 
 ```bash
 # Syntax: docker cp <ContainerName>:<PathInside> <PathOnHost>
-docker cp testingllmrepairengine:/app/playwright-report ./playwright-report
+docker cp testing-llm-automation-engine:/app/playwright-report ./playwright-report
 ```
 
 **View the Report:**
@@ -189,31 +189,31 @@ python -m src.agents.healer tests/generated/broken_example.spec.ts
 ### Stop the Container
 
 ```bash
-docker stop testingllmrepairengine
+docker stop testing-llm-automation-engine
 ```
 
 ### Start a Stopped Container
 
 ```bash
-docker start testingllmrepairengine
+docker start testing-llm-automation-engine
 ```
 
 ### Remove the Container
 
 ```bash
-docker rm testingllmrepairengine
+docker rm testing-llm-automation-engine
 ```
 
 ### View Container Logs
 
 ```bash
-docker logs testingllmrepairengine
+docker logs testing-llm-automation-engine
 ```
 
 ### Follow Logs in Real-Time
 
 ```bash
-docker logs -f testingllmrepairengine
+docker logs -f testing-llm-automation-engine
 ```
 
 ## Troubleshooting
@@ -235,7 +235,7 @@ If you encounter permission errors with mounted volumes, adjust file permissions
 Check logs for errors:
 
 ```bash
-docker logs testingllmrepairengine
+docker logs testing-llm-automation-engine
 ```
 
 ### Port Already in Use

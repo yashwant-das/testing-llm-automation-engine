@@ -1,5 +1,5 @@
 """
-Gradio web interface for the Testing LLM Repair Engine.
+Gradio web interface for the Testing LLM Automation Engine.
 
 Provides three main tabs:
 - Test Generator: Generate Playwright tests from URL and description
@@ -52,8 +52,8 @@ h1 {
 """
 
 # Use default theme for standard Gradio appearance
-with gr.Blocks(title="Testing LLM Repair Engine") as demo:
-    gr.Markdown("# Testing LLM Repair Engine")
+with gr.Blocks(title="Testing LLM Automation Engine") as demo:
+    gr.Markdown("# Testing LLM Automation Engine")
     gr.Markdown("Generate, test, and maintain Playwright test automation scripts.")
 
     with gr.Tabs():
