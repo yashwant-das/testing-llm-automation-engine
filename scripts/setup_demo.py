@@ -43,6 +43,9 @@ test('login failure demo', async ({ page }) => {
         "Option A (CLI): python -m src.agents.healer tests/generated/demo_broken.spec.ts"
     )
     print(
+        "                (Optional: Add '--max-retries 3' to configure healing attempts)"
+    )
+    print(
         "Option B (UI):  python src/app.py -> 'Self-Healer' tab -> Upload 'tests/generated/demo_broken.spec.ts'"
     )
 

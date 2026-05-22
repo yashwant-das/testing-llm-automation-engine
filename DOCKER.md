@@ -172,7 +172,11 @@ If a test fails, invoke the Healer agent manually to fix the code:
 **Inside the Docker Shell:**
 
 ```bash
+# Run healer with default 3 attempts (matches Web UI)
 uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
+
+# Or run with custom retry limit
+uv run python -m src.agents.healer tests/generated/broken_example.spec.ts --max-retries 5
 ```
 
 **Expected Workflow:**

@@ -336,7 +336,7 @@ def emit_artifacts(decision: HealingDecision, timeline: ExecutionTimeline):
     logger.info(f"Artifacts saved:\n     {decision_path}\n     {timeline_path}")
 
 
-def attempt_healing(test_file, max_retries=1):
+def attempt_healing(test_file, max_retries=3):
     """Orchestrate the healing pipeline."""
     timeline = ExecutionTimeline()
     timeline.add_step("Start", f"Healing session started for {test_file}")
@@ -461,7 +461,22 @@ def attempt_healing(test_file, max_retries=1):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python -m src.agents.healer <test_file>")
-        sys.exit(1)
-    print(attempt_healing(sys.argv[1]))
+    import argparse
+
+    parser = argparse.ArgumentParser(
+        description="Self-healing agent for automatically repairing broken Playwright tests."
+    )
+    parser.add_argument(
+        "test_file",
+        type=str,
+        help="Path to the broken Playwright test file.",
+    )
+    parser.add_argument(
+        "--max-retries",
+        type=int,
+        default=3,
+        help="Maximum healing attempts (default: 3).",
+    )
+    args = parser.parse_args()
+
+    print(attempt_healing(args.test_file, max_retries=args.max_retries))

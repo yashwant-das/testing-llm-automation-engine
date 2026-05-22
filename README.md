@@ -181,7 +181,11 @@ Go to `http://127.0.0.1:7860` to generate, run, and heal tests.
 ### Running Agents Individually
 
 ```bash
+# Run healer with default 3 attempts (matches Web UI)
 uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
+
+# Run healer with custom retry count
+uv run python -m src.agents.healer tests/generated/broken_example.spec.ts --max-retries 5
 ```
 
 ---
@@ -215,7 +219,7 @@ uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
 ### 5. Self-Healer
 
 - **Input**: A broken test file like `broken_example.spec.ts`.
-- **Command**: `uv run python -m src.agents.healer tests/generated/broken_example.spec.ts`
+- **Command**: `uv run python -m src.agents.healer tests/generated/broken_example.spec.ts` (or optionally append `--max-retries 3`)
 - **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs. Handles cascading fixes for multiple subsequent errors through a configurable **Max Healing Attempts** parameter.
 - **Deep Dive**: See [HEALING_SCENARIOS.md](docs/HEALING_SCENARIOS.md) for a detailed breakdown of how the agent resolves specific failures like Locator Drift, Network Flakiness, and Race Conditions.
 - **Trial**: To see it in action, purposefully introduce mistakes into the locator IDs or button names in the script and watch the agent heal them!
