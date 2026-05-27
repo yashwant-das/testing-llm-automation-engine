@@ -82,6 +82,93 @@ await page.click('#right');"""
 """
         self.assertEqual(new_code.strip(), expected.strip())
 
+    def test_nested_indentation_preservation(self):
+        current_code = """
+    test('nested', async ({ page }) => {
+        await page.click('#wrong');
+        // extra comments
+    });
+"""
+        target = "await page.click('#wrong');"
+        # Replacement has nested if statement
+        replacement = """await page.click('#right');
+if (success) {
+    await page.click('#done');
+}"""
+
+        decision = HealingDecision(
+            test_file="dummy.ts",
+            failure_type=FailureType.UNKNOWN,
+            failure_summary="",
+            evidence=Evidence(error_log=""),
+            hypothesis="",
+            confidence_score=1.0,
+            reasoning_steps=[],
+            action_taken=HealingAction(
+                original_code=target, fixed_code=replacement, description=""
+            ),
+        )
+
+        new_code = apply_fix("dummy.ts", current_code, decision)
+
+        expected = """
+    test('nested', async ({ page }) => {
+        await page.click('#right');
+        if (success) {
+            await page.click('#done');
+        }
+        // extra comments
+    });
+"""
+        self.assertEqual(new_code.strip(), expected.strip())
+
+    def test_extract_url_from_code(self):
+        from src.agents.healer import extract_url_from_code
+
+        code_single = "await page.goto('https://example.com/foo');"
+        code_double = 'await page.goto("https://example.com/bar");'
+        code_backtick = "await page.goto(`https://example.com/baz`);"
+        code_none = "await page.click('#btn');"
+
+        self.assertEqual(extract_url_from_code(code_single), "https://example.com/foo")
+        self.assertEqual(extract_url_from_code(code_double), "https://example.com/bar")
+        self.assertEqual(
+            extract_url_from_code(code_backtick), "https://example.com/baz"
+        )
+        self.assertIsNone(extract_url_from_code(code_none))
+
+    def test_coercion_failure_type(self):
+        decision = HealingDecision(
+            test_file="dummy.ts",
+            failure_type="LOCATOR_DRIFT",
+            failure_summary="A selector drifted",
+            evidence=Evidence(error_log=""),
+            hypothesis="",
+            confidence_score=1.0,
+            reasoning_steps=[],
+            action_taken=HealingAction(original_code="", fixed_code="", description=""),
+        )
+        # Should coerce to FailureType enum
+        self.assertEqual(decision.failure_type, FailureType.LOCATOR_DRIFT)
+        self.assertIsInstance(decision.failure_type, FailureType)
+
+        # Output to markdown should succeed
+        md = decision.to_markdown()
+        self.assertIn("LOCATOR_DRIFT", md)
+
+        # Should fallback gracefully to UNKNOWN for invalid values
+        decision_invalid = HealingDecision(
+            test_file="dummy.ts",
+            failure_type="INVALID_TYPE_BLAH",
+            failure_summary="Something failed",
+            evidence=Evidence(error_log=""),
+            hypothesis="",
+            confidence_score=1.0,
+            reasoning_steps=[],
+            action_taken=HealingAction(original_code="", fixed_code="", description=""),
+        )
+        self.assertEqual(decision_invalid.failure_type, FailureType.UNKNOWN)
+
 
 if __name__ == "__main__":
     unittest.main()

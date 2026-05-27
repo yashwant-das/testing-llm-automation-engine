@@ -47,6 +47,12 @@ class TestFailureClassification(unittest.TestCase):
         self.assertEqual(f_type, FailureType.ENVIRONMENT_ISSUE)
         self.assertEqual(conf, 1.0)
 
+    def test_waiting_for_locator_heuristic(self):
+        logs = "Error: waiting for locator('button') to be visible"
+        f_type, conf, reason = classify_failure_heuristic(logs)
+        self.assertEqual(f_type, FailureType.TIMEOUT)
+        self.assertEqual(conf, 1.0)
+
 
 if __name__ == "__main__":
     unittest.main()

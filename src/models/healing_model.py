@@ -59,6 +59,13 @@ class HealingDecision:
     verification_log: Optional[str] = None
     timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
 
+    def __post_init__(self):
+        if isinstance(self.failure_type, str):
+            try:
+                self.failure_type = FailureType(self.failure_type)
+            except ValueError:
+                self.failure_type = FailureType.UNKNOWN
+
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
 
@@ -68,13 +75,18 @@ class HealingDecision:
     def to_markdown(self) -> str:
         """Generate a human-readable markdown report."""
         emoji = "✅" if self.verification_passed else "❌"
+        fail_type_str = (
+            self.failure_type.value
+            if hasattr(self.failure_type, "value")
+            else str(self.failure_type)
+        )
         return f"""
 # Healing Report: {self.timestamp}
 **File:** `{self.test_file}`
 **Status:** {emoji} {"Fixed" if self.verification_passed else "Failed"}
 
 ## Diagnosis
-- **Type:** `{self.failure_type.value}`
+- **Type:** `{fail_type_str}`
 - **Summary:** {self.failure_summary}
 
 ## Evidence

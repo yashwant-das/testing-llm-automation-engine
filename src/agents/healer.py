@@ -5,10 +5,12 @@ Refactored for Phase 1: Explainable Healing.
 
 import json
 import logging
+import re
 import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +21,7 @@ from src.models.healing_model import (
     HealingAction,
     HealingDecision,
 )
+from src.utils.browser import fetch_page_context
 from src.utils.llm import extract_json_block, get_client, get_model
 from src.utils.prompt_loader import load_prompt
 from src.utils.validation import validate_file_path
@@ -29,6 +32,15 @@ sys.path.append(str(PROJECT_ROOT))
 
 ARTIFACTS_DIR = PROJECT_ROOT / "tests" / "artifacts"
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+class TestRunResult:
+    """Mock class to match CompletedProcess for healer fallback results."""
+
+    def __init__(self, returncode: int, stdout: str, stderr: str):
+        self.returncode = returncode
+        self.stdout = stdout
+        self.stderr = stderr
 
 
 def run_test(test_file):
@@ -44,25 +56,36 @@ def run_test(test_file):
         )
         return result
     except subprocess.TimeoutExpired:
-
-        class TimeoutResult:
-            returncode = 1
-            stdout = ""
-            stderr = "Test execution timed out after 60 seconds"
-
-        return TimeoutResult()
+        return TestRunResult(
+            returncode=1,
+            stdout="",
+            stderr="Test execution timed out after 60 seconds",
+        )
     except FileNotFoundError:
+        return TestRunResult(
+            returncode=1,
+            stdout="",
+            stderr="Playwright not found",
+        )
 
-        class NotFoundResult:
-            returncode = 1
-            stdout = ""
-            stderr = "Playwright not found"
 
-        return NotFoundResult()
+def extract_url_from_code(code: str) -> Optional[str]:
+    """Extract target URL from Playwright test code.
+
+    Finds page.goto(...) calls in the code.
+    """
+    if not code:
+        return None
+    # Matches await page.goto('...') or page.goto("...") or page.goto(`...`)
+    pattern = r"page\.goto\(['\"`](https?://[^\s'\"`]+)['\"`]\)"
+    match = re.search(pattern, code)
+    if match:
+        return match.group(1)
+    return None
 
 
 def gather_evidence(test_file, result):
-    """Collect evidence from the failed test run, including screenshots if available."""
+    """Collect evidence from the failed test run, including screenshots and DOM if available."""
     logs = result.stderr if result.stderr else result.stdout
 
     # Try to find the most recent screenshot in test-results
@@ -77,7 +100,26 @@ def gather_evidence(test_file, result):
             latest_screenshot = max(screenshots, key=lambda p: p.stat().st_mtime)
             screenshot_path = str(latest_screenshot)
 
-    return Evidence(error_log=logs, screenshot_path=screenshot_path, dom_snippet=None)
+    # Extract URL from test file to fetch DOM snippet
+    dom_snippet = None
+    try:
+        test_file_path = Path(test_file)
+        if test_file_path.exists():
+            with open(test_file_path, "r", encoding="utf-8") as f:
+                code = f.read()
+            url = extract_url_from_code(code)
+            if url:
+                logger.info(f"Extracting DOM context from target URL: {url}...")
+                dom_snippet = fetch_page_context(url)
+                if dom_snippet and dom_snippet.startswith("Error"):
+                    logger.warning(f"Failed to fetch DOM context: {dom_snippet}")
+                    dom_snippet = None
+    except Exception as e:
+        logger.warning(f"Error gathering DOM context evidence: {e}")
+
+    return Evidence(
+        error_log=logs, screenshot_path=screenshot_path, dom_snippet=dom_snippet
+    )
 
 
 def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
@@ -93,12 +135,13 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
     if (
         "TimeoutError" in logs
         or "waiting for selector" in logs
+        or "waiting for locator" in logs
         or "Test execution timed out" in logs
     ):
         return (
             FailureType.TIMEOUT,
             1.0,
-            "Detected 'TimeoutError' or 'waiting for selector' in logs",
+            "Detected 'TimeoutError', 'waiting for selector', or 'waiting for locator' in logs",
         )
 
     # 2. Target Closed / Environment
@@ -179,15 +222,30 @@ def analyze_and_plan(test_file, code, evidence: Evidence) -> HealingDecision:
         failure_type=h_type.value, confidence=h_conf, reason=h_reason
     )
 
-    user_prompt = f"""FILE: {test_file}
+    user_prompt_lines = [
+        f"FILE: {test_file}",
+        "",
+        "BROKEN CODE:",
+        "```typescript",
+        code,
+        "```",
+        "",
+        "ERROR LOGS:",
+        evidence.error_log[:2000],
+    ]
 
-BROKEN CODE:
-```typescript
-{code}
-```
+    if evidence.dom_snippet:
+        user_prompt_lines.extend(
+            [
+                "",
+                "PAGE DOM CONTEXT (CLEANED):",
+                "```html",
+                evidence.dom_snippet[:30000],
+                "```",
+            ]
+        )
 
-ERROR LOGS:
-{evidence.error_log[:2000]}"""
+    user_prompt = "\n".join(user_prompt_lines)
 
     client = get_client()
     try:
@@ -264,7 +322,15 @@ def apply_fix(file_path, current_code, decision: HealingDecision):
         return current_code
 
     # 1. Try Exact Match
-    if target in current_code:
+    # Only do exact match if replacement is a single line, or if the target matches exactly and has the same leading indentation
+    if target in current_code and (
+        len(replacement.splitlines()) == 1
+        or (
+            len(target.splitlines()) > 1
+            and (len(target) - len(target.lstrip()))
+            == (len(replacement) - len(replacement.lstrip()))
+        )
+    ):
         return current_code.replace(target, replacement)
 
     # 2. Try Normalized Match (Ignore leading/trailing whitespace per line)
@@ -293,11 +359,26 @@ def apply_fix(file_path, current_code, decision: HealingDecision):
                 - len(code_lines[first_line_idx].lstrip())
             ]
 
-            # Indent the replacement lines
+            # Calculate the indentation of the first non-empty line of the replacement to use as reference
             replacement_lines = replacement.splitlines()
+            non_empty_replacement = [line for line in replacement_lines if line.strip()]
+            if non_empty_replacement:
+                first_rep = non_empty_replacement[0]
+                rep_base_indent_len = len(first_rep) - len(first_rep.lstrip())
+            else:
+                rep_base_indent_len = 0
+
+            # Indent the replacement lines while preserving relative indentation
             indented_replacement = []
             for r_line in replacement_lines:
-                indented_replacement.append(base_indent + r_line.lstrip())
+                if not r_line.strip():
+                    indented_replacement.append("")
+                else:
+                    current_indent_len = len(r_line) - len(r_line.lstrip())
+                    rel_indent_len = max(0, current_indent_len - rep_base_indent_len)
+                    indented_replacement.append(
+                        base_indent + (" " * rel_indent_len) + r_line.lstrip()
+                    )
 
             new_code_lines = (
                 code_lines[:i]

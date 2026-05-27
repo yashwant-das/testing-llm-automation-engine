@@ -4,8 +4,17 @@
     "MD024": {
       "siblings_only": true,
     },
+    "MD025": false,
     "MD033": false,
     "MD041": false,
   },
-  "ignores": ["node_modules", ".git", ".venv", "tests/artifacts", "test-results"],
+  "ignores": [
+    "node_modules",
+    ".git",
+    ".venv",
+    "tests/artifacts",
+    "test-results",
+    "playwright-report",
+    "improvements",
+  ],
 }
