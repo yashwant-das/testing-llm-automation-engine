@@ -50,9 +50,12 @@ What sets this framework apart from standard test automation tools?
 - **Vision Agent**: Uses vision-capable LLMs (e.g., Qwen-VL) to understand UI from screenshots.
 - **Self-Healing**: Automatically diagnoses failing tests, proposes a patch, applies it, verifies the result, and supports sequential multi-step healing via the **Max Healing Attempts** configuration.
 - **Enhanced Heuristics**: Deterministically identifies network errors, JavaScript runtime errors, and locator drift.
+- **Streaming Operations UI**: The Gradio dashboard now presents each workflow as a compact control panel, live execution timeline, and artifact inspector.
+- **Explainable Healing Reports**: The Self-Healer tab streams each attempt, shows a human-readable diagnosis, and keeps raw `HealingDecision` JSON evidence available in an expandable inspector.
+- **Evidence-Rich Debugging**: Healing runs collect Playwright logs, the latest captured screenshot when available, and DOM context from the target page URL embedded in the spec.
 - **Customizable Prompts**: All LLM system instructions are externalized in the `prompts/` directory for easy tweaking.
 - **Input Validation**: URL shape validation, generated-test path restrictions, description length limits, and dangerous-character checks for user inputs.
-- **Interactive Dashboard**: Centralized Gradio interface for managing test generation, vision context, and healing operations.
+- **Interactive Dashboard**: Centralized Gradio interface for managing DOM generation, vision-assisted generation, test execution, and healing operations.
 
 ---
 
@@ -174,9 +177,11 @@ uv run python src/app.py
 
 Go to `http://127.0.0.1:7860` to generate, run, and heal tests.
 
-<img width="2022" height="1324" alt="Screenshot 2026-01-30 at 10 40 13 PM" src="https://github.com/user-attachments/assets/71abaf56-78ae-44f6-bce1-f5d9413a48b4" />
-<img width="2022" height="1324" alt="Screenshot 2026-01-30 at 10 40 38 PM" src="https://github.com/user-attachments/assets/c9a93fd7-c931-4738-a416-4568a6936932" />
-<img width="2022" height="1324" alt="Screenshot 2026-01-30 at 10 42 47 PM" src="https://github.com/user-attachments/assets/d4ba59bb-1fed-41a2-9758-0765800f1aa4" />
+The UI is organized into three agent tabs:
+
+- **Test Generator**: Enter a target URL and scenario, generate a Playwright spec, then run it from the same screen. The center timeline streams validation, page scanning, prompt preparation, LLM generation, file writing, and Playwright execution status.
+- **Vision Agent**: Capture a page screenshot, preview it immediately, send it to the configured vision model, inspect generated TypeScript, and run the resulting spec.
+- **Self-Healer**: Upload a broken `.spec.ts` file, choose **Max Healing Attempts** from 1 to 5, and watch the healer stream initial verification, evidence gathering, AI diagnosis, repair application, and verification. The right panel shows an explainable report, execution logs, and raw JSON evidence.
 
 ### Running Agents Individually
 
@@ -220,7 +225,7 @@ uv run python -m src.agents.healer tests/generated/broken_example.spec.ts --max-
 
 - **Input**: A broken test file like `broken_example.spec.ts`.
 - **Command**: `uv run python -m src.agents.healer tests/generated/broken_example.spec.ts` (or optionally append `--max-retries 3`)
-- **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs. Handles cascading fixes for multiple subsequent errors through a configurable **Max Healing Attempts** parameter.
+- **Goal**: Automatically repairs incorrect selectors and labels by analyzing Playwright error logs, screenshot artifacts, and DOM context from the target page when available. Handles cascading fixes for multiple subsequent errors through a configurable **Max Healing Attempts** parameter.
 - **Deep Dive**: See [HEALING_SCENARIOS.md](docs/HEALING_SCENARIOS.md) for a detailed breakdown of how the agent resolves specific failures like Locator Drift, Network Flakiness, and Race Conditions.
 - **Trial**: To see it in action, purposefully introduce mistakes into the locator IDs or button names in the script and watch the agent heal them!
 

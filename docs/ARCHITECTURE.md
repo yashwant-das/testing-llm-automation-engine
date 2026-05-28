@@ -25,8 +25,9 @@ The system consists of three primary agents, each with strict boundaries:
 
 - **Input:** URL, User Story (Text).
 - **Responsibility:** Generates the _initial_ Playwright TypeScript test.
-- **Method:** DOM-based analysis (primary) or Vision-based (secondary).
+- **Method:** DOM-based page context captured through the browser helper.
 - **Output:** A runnable `.spec.ts` file in `tests/generated/`.
+- **UI Surface:** The Gradio Test Generator tab streams validation, page scanning, prompt preparation, LLM inference, and Playwright execution status into a live timeline.
 
 ### B. Vision Agent (`src/agents/vision.py`)
 
@@ -34,12 +35,15 @@ The system consists of three primary agents, each with strict boundaries:
 - **Responsibility:** Provides visual understanding when DOM analysis is insufficient.
 - **Method:** Captures screenshots, uses Vision LLM (guided by `prompts/vision.md`) to interpret UI layout.
 - **Output:** Generates test code based on visual cues.
+- **UI Surface:** The Gradio Vision Agent tab previews the captured screenshot immediately, then streams encoding, model inference, generated code, and test execution status.
 
 ### C. Healer Agent (`src/agents/healer.py`)
 
 - **Input:** Path to a failing `.spec.ts` file.
 - **Responsibility:** Diagnoses failure, hypothesizes root cause, gathers evidence, patches the code, and verifies the fix.
 - **Key Feature:** **Hybrid Intelligence**. Uses Regex Heuristics for 100% confidence patterns and LLM (guided by `prompts/healer.md`) for complex reasoning.
+- **Evidence Context:** Reads Playwright logs, the latest screenshot under `test-results/` when present, and DOM context from the URL found in `page.goto(...)`.
+- **Execution Bound:** Retries are capped by the CLI `--max-retries` option or the UI **Max Healing Attempts** slider.
 - **Output:**
   1. Patched test file.
   2. `HealingDecision` JSON (Evidence + Reasoning).
@@ -55,6 +59,7 @@ The Healer Agent operates in a strict, explainable pipeline:
    - Runs the test via Playwright.
    - Parses logs for errors (`TimeoutError`, `TargetClosedError`, assertion output, `404/500`, `ReferenceError`, `TypeError`).
    - **Evidence Gathering**: Automatically scans `test-results/` for the latest screenshot path and records it in the artifact when Playwright captured one.
+   - **DOM Context**: Extracts the target URL from `page.goto(...)` and captures a cleaned page context to help the LLM reason about selector drift.
 
 2. **Deterministic Classification (Heuristics)**
    - **Regex Layer**: Matches logs against known failure patterns (including network and JS errors).
@@ -74,11 +79,26 @@ The Healer Agent operates in a strict, explainable pipeline:
 
 6. **UI Surfacing (Visualize)**
    - Emits JSON artifacts to `tests/artifacts/`.
-   - **Gradio Dashboard** reads these to render an **Execution Timeline** and **Decision Inspector** after each healing run.
+   - **Gradio Dashboard** streams the same lifecycle into a center timeline while the run is active.
+   - The right-side inspector shows a human-readable **Explainable Report**, execution logs, and expandable raw JSON evidence.
 
 ---
 
-## 4. Determinism & Quality Control
+## 4. Gradio Operations Console
+
+The Stage 1 UI modernization keeps the Python and Gradio architecture intact while making agent execution observable.
+
+Each workflow follows the same three-column pattern:
+
+1. **Controls:** Compact inputs for URL, scenario, upload, retry count, and primary actions.
+2. **Live Timeline:** Incremental Markdown updates emitted from yield-based generator callbacks.
+3. **Artifact Inspector:** Tabs for generated code, screenshot previews, execution logs, explainable healer reports, and raw JSON evidence.
+
+The UI does not expose raw model chain-of-thought. It surfaces operational summaries such as validation, evidence gathering, failure classification, hypothesis, repair application, confidence, and verification status.
+
+---
+
+## 5. Determinism & Quality Control
 
 1. **Bounded Execution:** Max healing attempts per test run to prevent loops.
 2. **Structured Data:** All decisions follow strict JSON schemas (see `src/models/healing_model.py`).
@@ -87,7 +107,7 @@ The Healer Agent operates in a strict, explainable pipeline:
    - **Python**: Linted and formatted with Ruff.
    - **Enforcement**: Husky pre-commit hooks run lint-staged checks before commits in local development.
 
-## 5. Confidence Score Calculation
+## 6. Confidence Score Calculation
 
 The `confidence_score` is calculated through a tiered approach in `src/agents/healer.py`:
 
@@ -101,7 +121,7 @@ Scores are preserved in the `HealingDecision` artifact for auditability.
 
 ---
 
-## 6. Quality Control & DX (Developer Experience)
+## 7. Quality Control & DX (Developer Experience)
 
 To ensure this project remains maintainable and professional, we've implemented a robust "Pre-flight" pipeline:
 
