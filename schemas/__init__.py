@@ -13,6 +13,7 @@ from .healing import (
     HealingAction,
     HealingAnalysis,
     HealingDecision,
+    RepairStrategy,
     TimelineStep,
 )
 from .shared import FailureType, LLMConfig, RunResult
@@ -23,6 +24,7 @@ __all__ = [
     "RunResult",
     "LLMConfig",
     # healing
+    "RepairStrategy",
     "HealingAction",
     "Evidence",
     "HealingAnalysis",

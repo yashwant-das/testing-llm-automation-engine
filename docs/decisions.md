@@ -45,32 +45,51 @@ See ADR-007 for the implemented decision.
 ## ADR-003: AST tool selection for TypeScript repair
 
 **Date:** 2026-06-06
-**Status:** UNDER INVESTIGATION (see `docs/ast-evaluation.md`)
+**Status:** DECIDED
 
 ### Context
 
-`apply_fix()` in `healer.py` repairs tests using string replacement with sliding-window indentation normalization. Structural repairs (add import, rename locator across file, change test structure) are not possible without AST access.
+`apply_fix()` in `src/healing/repair.py` repairs tests using string replacement with
+sliding-window indentation normalization. Structural repairs (add import, rename locator
+across file, change test structure) are not possible without AST access.
+
+Full evaluation recorded in `docs/ast-evaluation.md`.
 
 ### Decision
 
-Pending completion of `docs/ast-evaluation.md`. Candidates: ts-morph, Babel, tree-sitter, SWC.
+**Use ts-morph** via Node.js subprocess with a typed JSON stdin/stdout protocol.
 
-### Evaluation Criteria
+### Rationale
 
-- TypeScript support (not just JS)
-- AST modification (read + write, not read-only)
-- Python interoperability (call from Python via subprocess or bindings)
-- Maintenance burden
-- Learning value as reference implementation
+- **TypeScript-native:** Built on the TypeScript compiler API — full TypeScript understanding
+  including generics, decorators, and template literals.
+- **Read/write AST:** Node replacement, insertion, deletion — formatting-preserving.
+- **Zero new runtime deps beyond what Playwright already requires:** Node.js is already
+  present; `typescript` is already a devDependency. Only `ts-morph` is new.
+- **Subprocess isolation:** The AST script runs in a separate Node.js process. Any crash
+  or timeout in the script does not affect the Python healing pipeline.
+- **Typed JSON protocol:** Python sends `{ strategy, source, original_code, fixed_code }`
+  on stdin; Node.js returns `{ success, source, changes }` on stdout.
 
-### Preliminary Assessment
+### Alternatives Rejected
 
-- **ts-morph:** TypeScript-native, full read/write, best TypeScript support. Requires Node.js subprocess from Python.
-- **Babel:** JS-focused; TypeScript via plugin but lossy; JavaScript ecosystem only.
-- **tree-sitter:** Read-only query focus; modification requires patching the source string; Python bindings exist.
-- **SWC:** Rust-based, fast, primarily for bundling; not designed for programmatic AST modification.
+- **Babel:** TypeScript support is second-class (strips types); adds dependencies on top
+  of `typescript` which is already installed.
+- **tree-sitter:** Read-only parse trees; mutations are still string-based; Python native
+  bindings add build complexity.
+- **SWC:** Designed for compilation/bundling; programmatic mutation API is experimental
+  Rust-only.
 
-Preliminary recommendation: **ts-morph** via Node.js subprocess, with typed JSON protocol between Python and Node.
+### Consequences
+
+- **Positive:** Structural repairs (add import, multi-site selector rename, timeout
+  adjustment, assertion swap) all become possible without regex fragility.
+- **Negative:** Node.js subprocess adds ~50ms latency per repair call. Acceptable given
+  healing sessions take seconds to minutes.
+- **Fallback retained:** String replacement remains the default; AST is tried first when
+  `repair_strategy` is set to a non-`string_replace` value. String fallback fires if AST
+  produces no changes.
+- **Revisit trigger:** If Playwright drops Node.js as a dependency (extremely unlikely).
 
 ---
 

@@ -2,6 +2,7 @@ const eslint = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const playwright = require('eslint-plugin-playwright');
 const prettier = require('eslint-config-prettier');
+const globals = require('globals');
 
 module.exports = tseslint.config(
   eslint.configs.recommended,
@@ -20,6 +21,15 @@ module.exports = tseslint.config(
       'test-results/',
       'eslint.config.cjs',
     ],
+  },
+  {
+    // Node.js scripts — allow require(), process, __dirname, etc.
+    files: ['scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
   },
   {
     rules: {

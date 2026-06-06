@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 4 — Healer Decomposition (COMPLETE)
-**Next Phase:** Phase 5 — AST-Based Repair
+**Phase:** Phase 5 — AST-Based Repair (COMPLETE)
+**Next Phase:** Phase 6 — Context Collection
 **Blockers:** None
 
 ---
@@ -166,6 +166,53 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 
 ---
 
+### 2026-06-06 — Phase 5: AST-Based Repair ✅
+
+`apply_fix()` upgraded from string-only surgery to AST-first with string fallback.
+ts-morph selected as the AST tool (see `docs/ast-evaluation.md` and ADR-003).
+205/205 tests passing.
+
+**Files created:**
+
+- `docs/ast-evaluation.md` — full tool evaluation (ts-morph vs Babel vs tree-sitter vs SWC)
+- `scripts/ast_repair.js` — Node.js ts-morph script; 5 strategies; JSON stdin/stdout protocol
+- `tests/fixtures/broken_selector.spec.ts` — fixture: selector drift (2 occurrences)
+- `tests/fixtures/broken_timeout.spec.ts` — fixture: timeout too short
+- `tests/fixtures/broken_import.spec.ts` — fixture: missing import
+- `tests/fixtures/broken_assertion.spec.ts` — fixture: wrong assertion method
+- `tests/unit_test_ast_repair.py` — 35 new tests (routing, integration, regression)
+
+**Files updated:**
+
+- `schemas/healing.py` — added `RepairStrategy` enum; `HealingAction.repair_strategy` field
+  (default `STRING_REPLACE` — backward-compatible with all existing artifacts)
+- `schemas/__init__.py` — export `RepairStrategy`
+- `src/healing/repair.py` — AST path in `apply_fix()`; string path extracted to
+  `_apply_string_fix()`; `_apply_ast_fix()` calls `scripts/ast_repair.js` via subprocess
+- `prompts/healer.md` — `repair_strategy` field added to output schema with strategy
+  selection guidance
+- `docs/decisions.md` — ADR-003 updated from UNDER INVESTIGATION → DECIDED
+- `package.json` — `ts-morph` added to dependencies
+
+**AST repair strategies (MVP):**
+
+- `selector_replace` — replaces ALL occurrences of a locator selector file-wide
+- `import_add` — inserts missing import; merges named imports if module already present
+- `timeout_adjust` — updates `{ timeout: N }` property values
+- `role_argument` — updates `name` option in `getByRole()` calls
+- `assertion_swap` — renames assertion methods in `expect()` chains
+
+**Fallback policy:**
+
+1. Strategy is `string_replace` → skip subprocess, use string path directly
+2. AST changes: 0 → warn + fall back to string
+3. Node.js timeout / FileNotFoundError / bad JSON → warn + fall back to string
+4. String also fails → return unchanged code, log warning
+
+**Debt resolved:** TD-003 (string-based repair)
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -174,9 +221,8 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 | Phase 2 | LLM Layer Modernization | COMPLETE |
 | Phase 3 | Architecture Cleanup (Service Layer) | COMPLETE |
 | Phase 4 | Healer Decomposition | COMPLETE |
-| Phase 5 | AST-Based Repair | NEXT |
-| Phase 5 | AST-Based Repair | NEXT |
-| Phase 6 | Context Collection | PENDING |
+| Phase 5 | AST-Based Repair | COMPLETE |
+| Phase 6 | Context Collection | NEXT |
 | Phase 7 | Evaluation Framework | PENDING |
 | Phase 8 | Observability | PENDING |
 | Phase 9 | Explainability | PENDING |

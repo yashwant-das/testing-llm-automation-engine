@@ -12,11 +12,37 @@ verification results).
 """
 
 from datetime import datetime
+from enum import Enum
 from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .shared import FailureType
+
+
+class RepairStrategy(str, Enum):
+    """Repair strategy selected by the LLM for each HealingAction.
+
+    The planner chooses the strategy most appropriate for the failure type.
+    ``string_replace`` is the legacy fallback; all other values trigger the
+    ts-morph AST repair path in ``src/healing/repair.py``.
+
+    | Value              | What the AST script does |
+    |--------------------|--------------------------|
+    | string_replace     | Existing sliding-window string replacement (fallback) |
+    | selector_replace   | Find all matching locator/getByX calls and replace the selector argument |
+    | import_add         | Insert a missing import declaration (skips if already present) |
+    | timeout_adjust     | Find ``{ timeout: N }`` properties and update the value |
+    | role_argument      | Update the ``name`` option in a ``getByRole()`` call |
+    | assertion_swap     | Rename an assertion method in an ``expect()`` chain |
+    """
+
+    STRING_REPLACE = "string_replace"
+    SELECTOR_REPLACE = "selector_replace"
+    IMPORT_ADD = "import_add"
+    TIMEOUT_ADJUST = "timeout_adjust"
+    ROLE_ARGUMENT = "role_argument"
+    ASSERTION_SWAP = "assertion_swap"
 
 
 class HealingAction(BaseModel):
@@ -25,6 +51,7 @@ class HealingAction(BaseModel):
     original_code: str
     fixed_code: str
     description: str
+    repair_strategy: RepairStrategy = Field(default=RepairStrategy.STRING_REPLACE)
 
     @field_validator("original_code", "fixed_code", mode="before")
     @classmethod
@@ -33,6 +60,14 @@ class HealingAction(BaseModel):
         if isinstance(v, list):
             return "\n".join(str(line) for line in v)
         return str(v) if v is not None else ""
+
+    @field_validator("repair_strategy", mode="before")
+    @classmethod
+    def coerce_repair_strategy(cls, v: object) -> RepairStrategy:
+        """Accept None or missing field from older LLM responses."""
+        if v is None:
+            return RepairStrategy.STRING_REPLACE
+        return v
 
 
 class Evidence(BaseModel):
@@ -61,7 +96,8 @@ class HealingAnalysis(BaseModel):
         "action_taken": {
             "original_code": "exact contiguous block to replace",
             "fixed_code": "replacement block",
-            "description": "what changed"
+            "description": "what changed",
+            "repair_strategy": "string_replace | selector_replace | import_add | timeout_adjust | role_argument | assertion_swap"
         }
     }
     """
