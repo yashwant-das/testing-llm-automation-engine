@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 10 — UI Reposition (COMPLETE)
-**Next Phase:** Phase 11 — Documentation Modernization
+**Phase:** Phase 11 — Documentation Modernization (COMPLETE)
+**Next Phase:** Modernization Program complete — all 11 phases done
 **Blockers:** None
 
 ---
@@ -497,7 +497,52 @@ vocabulary; SaaS-style marketing language removed throughout.
 
 ---
 
-## Upcoming Work
+### 2026-06-06 — Phase 11: Documentation Modernization ✅
+
+Reference-quality documentation written for senior engineers and researchers.
+440 tests passing (unchanged — documentation phase only).
+Score: 82/100 (up from 27/100 at baseline).
+
+**Files created:**
+
+- `docs/documentation-audit.md` — D1: per-document stale/accurate findings
+- `README.md` — D2: full rewrite; accurate architecture diagram; all 6 tabs described
+- `docs/architecture/overview.md` — layer map, data contracts, Mermaid sequence
+- `docs/architecture/healing.md` — 7-module table, classification, AST strategies, `HealingDecision` schema
+- `docs/architecture/generation.md` — DOM and visual pipelines with Mermaid diagrams
+- `docs/architecture/llm-layer.md` — component map, retry/fallback flow, provider config
+- `docs/architecture/observability.md` — 3 span types, thread-local isolation, JSONL queries
+- `docs/architecture/context-collection.md` — 6 collectors, single-session rationale
+- `docs/architecture/evaluation.md` — pure evaluators, benchmark runners, `BenchmarkRun` schema
+- `docs/ai-systems-engineering.md` — D4: 9 engineering patterns with code examples
+- `docs/evaluation/benchmarks.md` + `datasets.md` + `reproducibility.md` + `scoring.md` + `model-comparison.md` — D5
+- `docs/prompts/overview.md` + `healing.md` + `generation.md` + `versioning.md` — D6
+- `docs/development/setup.md` + `testing.md` + `debugging.md` + `adding-models.md` + `adding-benchmarks.md` + `adding-healing-strategies.md` — D7
+
+**Files updated:**
+
+- `docs/decisions.md` — ADR-005 "Action Required" resolved; ADR-008 through ADR-011 added
+- `docs/technical-debt.md` — all 15 items marked RESOLVED with phase references
+- `docs/scorecard.md` — post-Phase 10 (80/100) and post-Phase 11 (82/100) rows added
+
+**Files deleted:**
+
+- `docs/ARCHITECTURE.md` — superseded by `docs/architecture/`
+- `docs/DEMO_GUIDE.md` — product demo framing removed per Phase 10 reposition
+- `docs/HEALING_SCENARIOS.md` — superseded by `docs/architecture/healing.md`
+
+**D8 ADRs added:**
+
+- ADR-008: Single browser session for context collection (Phase 6)
+- ADR-009: Evaluation framework design — pure evaluators, injectable functions (Phase 7)
+- ADR-010: Thread-local session isolation for Gradio (Phase 8)
+- ADR-011: Healer decomposition into 7 modules (Phase 4)
+
+---
+
+## Modernization Program Summary
+
+All 11 phases complete. Maturity score: 27/100 → 82/100.
 
 | Phase | Description | Status |
 | --- | --- | --- |
@@ -511,7 +556,7 @@ vocabulary; SaaS-style marketing language removed throughout.
 | Phase 8 | Observability | COMPLETE |
 | Phase 9 | Explainability | COMPLETE |
 | Phase 10 | UI Reposition | COMPLETE |
-| Phase 11 | Documentation Modernization | NEXT |
+| Phase 11 | Documentation Modernization | COMPLETE |
 
 ---
 
