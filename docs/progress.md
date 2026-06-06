@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 2 — LLM Layer Modernization (COMPLETE)
-**Next Phase:** Phase 3 — Architecture Cleanup (Service Layer)
+**Phase:** Phase 3 — Architecture Cleanup / Service Layer (COMPLETE)
+**Next Phase:** Phase 4 — Healer Decomposition
 **Blockers:** None
 
 ---
@@ -101,6 +101,32 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 
 ---
 
+### 2026-06-06 — Phase 3: Architecture Cleanup (Service Layer) ✅
+
+`app.py` reduced from 875 lines to 199 lines. All orchestration logic extracted to `src/services/`.
+129/129 tests passing.
+
+**Files created:**
+
+- `src/services/__init__.py` — package documentation
+- `src/services/generation_service.py` — `generate_test_streaming`, `run_test_streaming`
+- `src/services/vision_service.py` — `analyze_visual_streaming`, `run_vision_test_streaming`
+- `src/services/healing_service.py` — `heal_test_streaming` (full healing loop with streaming)
+
+**Files updated:**
+
+- `src/app.py` — rewritten to 199 lines of pure Gradio layout + button wiring
+- `src/utils/llm.py` — stale `extract_code_block` docstring updated (no remaining callers)
+
+**Verified (app.py):**
+
+- No `subprocess` calls
+- No LLM calls (`get_client`, `get_model`, `extract_code_block`)
+- No agent-module imports (`from src.agents.*`)
+- Imports only from `src/services/`
+
+---
+
 ## Current Work
 
 ---
@@ -111,8 +137,8 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 | --- | --- | --- |
 | Phase 1 | Structured Outputs Foundation | COMPLETE |
 | Phase 2 | LLM Layer Modernization | COMPLETE |
-| Phase 3 | Architecture Cleanup (Service Layer) | NEXT |
-| Phase 4 | Healer Decomposition | PENDING |
+| Phase 3 | Architecture Cleanup (Service Layer) | COMPLETE |
+| Phase 4 | Healer Decomposition | NEXT |
 | Phase 5 | AST-Based Repair | PENDING |
 | Phase 6 | Context Collection | PENDING |
 | Phase 7 | Evaluation Framework | PENDING |

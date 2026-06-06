@@ -1,0 +1,215 @@
+"""
+Vision service — screenshot capture and vision-LLM test generation with streaming.
+
+analyze_visual_streaming     captures screenshot, calls vision LLM, yields progress.
+run_vision_test_streaming    thin wrapper around run_test_streaming with relabelled timeline.
+"""
+
+import base64
+import logging
+import os
+import re
+import time
+from datetime import datetime
+from pathlib import Path
+from typing import Iterator, Optional
+
+logger = logging.getLogger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+SCREENSHOT_DIR = PROJECT_ROOT / "tests" / "screenshots"
+
+
+def analyze_visual_streaming(
+    url: str, instruction: str
+) -> Iterator[tuple[str, Optional[str], str]]:
+    """Capture a screenshot and analyze it with the vision LLM, yielding progress.
+
+    The screenshot path is yielded as the second element of the tuple as soon as
+    it is available (before the LLM call), so the Gradio image preview updates
+    while the model is thinking.
+
+    Args:
+        url:         Target URL string (validated internally).
+        instruction: Test scenario instruction (validated internally).
+
+    Yields:
+        (timeline_markdown, screenshot_path_or_None, code_or_empty)
+    """
+    from playwright.sync_api import sync_playwright
+
+    from schemas.generation import GenerationResult
+    from src.llm import get_default_router
+    from src.utils.browser import extract_domain
+    from src.utils.llm import _extract_code_block
+    from src.utils.prompt_loader import load_prompt
+    from src.utils.validation import (
+        ValidationError,
+        validate_and_sanitize_url,
+        validate_description,
+    )
+
+    timeline = "### ⏱️ Visual Timeline\n\n"
+
+    # --- Validate ---
+    timeline += "🟢 **Input Validation**: Verifying target URL and instruction...\n\n"
+    yield timeline, None, ""
+
+    try:
+        validated_url = validate_and_sanitize_url(url)
+        validated_instruction = validate_description(instruction)
+    except ValidationError as exc:
+        yield (
+            timeline + f"🔴 **Validation Error**: {exc}",
+            None,
+            f"Validation Error: {exc}",
+        )
+        return
+    except Exception as exc:
+        yield timeline + f"🔴 **Error**: {exc}", None, f"Error: {exc}"
+        return
+
+    # --- Build screenshot path ---
+    timeline += (
+        "🟢 **Chromium Browser Initialization**: Pre-heating headless runner...\n\n"
+    )
+    yield timeline, None, ""
+
+    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+    domain = extract_domain(validated_url)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    clean_inst = re.sub(r"[^a-zA-Z0-9\s]", "", validated_instruction).lower()
+    snake_inst = "_".join(clean_inst.split())[:30]
+    screenshot_name = f"{domain}_{snake_inst}_{timestamp}.png"
+    screenshot_path = str(SCREENSHOT_DIR / screenshot_name)
+
+    # --- Capture screenshot ---
+    timeline += "🟢 **Screenshot Capturing**: Navigating page and rendering view...\n\n"
+    yield timeline, None, ""
+
+    try:
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=True)
+            context = browser.new_context(viewport={"width": 1280, "height": 720})
+            page = context.new_page()
+            page.goto(validated_url, timeout=30000, wait_until="domcontentloaded")
+            time.sleep(2)
+            page.screenshot(path=screenshot_path)
+            browser.close()
+    except Exception as exc:
+        yield (
+            timeline + f"🔴 **Browser Capture Error**: {exc}",
+            None,
+            f"Error capturing screenshot: {exc}",
+        )
+        return
+
+    if not os.path.exists(screenshot_path):
+        yield (
+            timeline + "🔴 **Browser Error**: Screenshot creation failed",
+            None,
+            f"Error: Screenshot was not created at {screenshot_path}",
+        )
+        return
+
+    # Yield screenshot preview before the (slow) LLM call
+    timeline += "🖼️ **Screenshot Captured**: Displaying active viewport render!\n\n"
+    yield timeline, screenshot_path, ""
+
+    # --- Encode screenshot ---
+    timeline += "🟢 **Encoding Screenshot**: Compressing image bytes to base64...\n\n"
+    yield timeline, screenshot_path, ""
+
+    try:
+        with open(screenshot_path, "rb") as f:
+            base64_image = base64.b64encode(f.read()).decode("utf-8")
+    except Exception as exc:
+        yield (
+            timeline + f"🔴 **Encoding Error**: {exc}",
+            screenshot_path,
+            f"Error: {exc}",
+        )
+        return
+
+    # --- Vision LLM ---
+    timeline += (
+        "🧠 **Visual AI Inference**: Calling vision LLM to interpret UI layout...\n\n"
+    )
+    yield timeline, screenshot_path, ""
+
+    try:
+        system_instruction = load_prompt("vision")
+        router = get_default_router()
+        llm_response = router.complete_vision(
+            messages=[
+                {"role": "system", "content": system_instruction},
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": f"TARGET URL: {validated_url}\nUser Scenario: {validated_instruction}",
+                        },
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:image/png;base64,{base64_image}"
+                            },
+                        },
+                    ],
+                },
+            ],
+            temperature=0.1,
+            max_tokens=2000,
+        )
+
+        if not llm_response.content:
+            yield (
+                timeline + "🔴 **LLM Error**: Vision model returned empty response",
+                screenshot_path,
+                "Error: Vision LLM returned empty response",
+            )
+            return
+
+        extracted = _extract_code_block(llm_response.content)
+        try:
+            result = GenerationResult(code=extracted)
+        except ValueError as exc:
+            yield (
+                timeline + f"🔴 **Code Extraction Error**: {exc}",
+                screenshot_path,
+                f"Error: Could not extract valid code from vision LLM response: {exc}",
+            )
+            return
+
+    except Exception as exc:
+        yield (
+            timeline + f"🔴 **LLM Error**: {exc}",
+            screenshot_path,
+            f"Vision LLM Error: {exc}",
+        )
+        return
+
+    timeline += "✅ **Success**: Visual-based test script successfully generated!\n\n"
+    yield timeline, screenshot_path, result.code
+
+
+def run_vision_test_streaming(
+    url: str, code: str, instruction: str
+) -> Iterator[tuple[str, str]]:
+    """Run a vision-generated test, relabelling the timeline for the visual tab.
+
+    Thin wrapper around generation_service.run_test_streaming.
+
+    Yields:
+        (timeline_markdown, logs_or_empty)
+    """
+    from src.services.generation_service import run_test_streaming
+
+    for timeline_val, logs_val in run_test_streaming(url, code, instruction):
+        yield (
+            timeline_val.replace(
+                "Test Execution Timeline", "Visual Test Execution Timeline"
+            ),
+            logs_val,
+        )

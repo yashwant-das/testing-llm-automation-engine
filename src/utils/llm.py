@@ -5,8 +5,8 @@ Public API:
   get_client()              — deprecated shim; returns a client via LLMClientFactory
   get_model(vision=False)   — deprecated shim; returns model via LLMRouter
   parse_llm_response()      — parse and validate an LLM response with Pydantic
-  extract_code_block()      — legacy code extractor (used by app.py, deprecated)
-  extract_json_block()      — legacy JSON extractor (kept for unit tests)
+  extract_code_block()      — legacy code extractor (deprecated, no callers; Phase 4 will delete)
+  extract_json_block()      — legacy JSON extractor (kept for unit_test_json.py; Phase 4 will delete)
 
 Note: get_client() and get_model() are deprecated and will be removed in Phase 3
 when app.py is replaced with the service layer. All new code should import
@@ -181,7 +181,7 @@ def extract_code_block(llm_response: str) -> str:
     """Extract a TypeScript code block from an LLM response.
 
     Deprecated: use parse_llm_response() with GenerationResult instead.
-    Kept for backward compatibility with app.py (removed in Phase 3).
+    No remaining callers — will be deleted in Phase 4.
     """
     return _extract_code_block(llm_response)
 
