@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 9 — Explainability (COMPLETE)
-**Next Phase:** Phase 10 — UI Reposition
+**Phase:** Phase 10 — UI Reposition (COMPLETE)
+**Next Phase:** Phase 11 — Documentation Modernization
 **Blockers:** None
 
 ---
@@ -443,6 +443,60 @@ confidence score and the specific evidence items it relied on.
 
 ---
 
+### 2026-06-06 — Phase 10: UI Reposition ✅
+
+Gradio demo repositioned as an **AI Engineering Workbench**.  Three new
+engineering inspector tabs added; pipeline tabs reframed with engineering
+vocabulary; SaaS-style marketing language removed throughout.
+440 tests passing (unchanged — all new code is UI wiring + read-only service logic).
+
+**Files created:**
+
+- `src/services/workbench_service.py` — three read-only service functions that
+  power the new inspector tabs:
+  `list_artifacts()`, `load_artifact()`, `run_classification_benchmark()`,
+  `load_traces()`
+
+**Files updated:**
+
+- `src/app.py` — rewritten with 6-tab engineering workbench layout; SaaS
+  framing removed; all pipeline logic unchanged
+
+**New tabs:**
+
+- **Artifact Inspector** — dropdown of `tests/artifacts/healing_decision_*.json`
+  files; selecting one renders `HealingDecision.to_markdown()` (with full Phase 9
+  provenance) alongside the raw JSON; "Refresh" button re-scans the directory
+- **Benchmark Explorer** — one-click heuristic classification benchmark
+  (`benchmarks/healing/fixtures/repair_scenarios.json`); no LLM or browser
+  required; deterministic; renders a pass/fail table in under 10 ms
+- **Trace Inspector** — reads `logs/traces.jsonl` and renders three tables
+  (session spans, LLM spans, subprocess spans) linked by `trace_id`
+
+**Pipeline tab changes:**
+
+- "Test Generator" → "Generation Pipeline"
+- "Self-Healer" → "Healing Pipeline" (tab "Explainable Report" → "Decision Report")
+- "Vision Agent" → "Vision Pipeline"
+- App title: "Testing LLM Automation Engine" → "AI Testing Workbench"
+- App subtitle: SaaS pitch removed → engineering description
+- All ⏱️ emoji-heavy placeholder text replaced with neutral engineering copy
+
+**Design decisions:**
+
+- **Workbench service is read-only** — the three new tabs call no LLM, launch no
+  browser, and write no files; they only read what the pipeline already produced
+- **Benchmark Explorer runs classification-only** — the full benchmark with LLM
+  repair requires a live model; the workbench runs the deterministic heuristic
+  sub-path so engineers can verify the classifier without credentials
+- **Artifact Inspector auto-loads on selection** — uses Gradio `.change()` so
+  engineers browse without an extra "Load" click
+- **Trace Inspector shows last 100 spans per type** — prevents the table from
+  becoming unusable on long-running deployments; the raw JSONL is always
+  queryable with `jq`
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -456,8 +510,8 @@ confidence score and the specific evidence items it relied on.
 | Phase 7 | Evaluation Framework | COMPLETE |
 | Phase 8 | Observability | COMPLETE |
 | Phase 9 | Explainability | COMPLETE |
-| Phase 10 | UI Reposition | NEXT |
-| Phase 11 | Documentation Modernization | PENDING |
+| Phase 10 | UI Reposition | COMPLETE |
+| Phase 11 | Documentation Modernization | NEXT |
 
 ---
 

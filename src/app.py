@@ -1,12 +1,16 @@
 """
-Gradio web interface for the Testing LLM Automation Engine.
+AI Testing Workbench — Gradio interface.
 
-UI wiring only — all orchestration logic lives in src/services/.
+UI wiring only.  All pipeline logic lives in src/services/.
+All inspector/benchmark logic lives in src/services/workbench_service.py.
 
 Tabs:
-  Test Generator  generate_test_streaming + run_test_streaming
-  Vision Agent    analyze_visual_streaming + run_vision_test_streaming
-  Self-Healer     heal_test_streaming
+  Generation Pipeline  generate_test_streaming + run_test_streaming
+  Healing Pipeline     heal_test_streaming
+  Vision Pipeline      analyze_visual_streaming + run_vision_test_streaming
+  Artifact Inspector   browse tests/artifacts/ healing decisions
+  Benchmark Explorer   run heuristic classification benchmark (no LLM)
+  Trace Inspector      browse logs/traces.jsonl
 """
 
 import logging
@@ -32,10 +36,17 @@ from src.services.vision_service import (
     analyze_visual_streaming,
     run_vision_test_streaming,
 )
+from src.services.workbench_service import (
+    list_artifacts,
+    load_artifact,
+    load_traces,
+    run_classification_benchmark,
+)
 
 css = """
 .tall-textbox textarea { min-height: 300px !important; }
 .tall-code .code-container { min-height: 400px !important; }
+.tall-md { min-height: 400px; }
 h1 {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
     font-weight: 600;
@@ -46,12 +57,45 @@ h1 {
 }
 """
 
-with gr.Blocks(title="Testing LLM Automation Engine") as demo:
-    gr.Markdown("# Testing LLM Automation Engine")
-    gr.Markdown("Generate, test, and maintain Playwright test automation scripts.")
+# ---------------------------------------------------------------------------
+# Artifact Inspector helpers (thin wrappers that satisfy Gradio's event model)
+# ---------------------------------------------------------------------------
+
+
+def refresh_artifacts() -> gr.Dropdown:
+    """Return an updated Dropdown populated with the current artifact list."""
+    paths = list_artifacts()
+    choices = [Path(p).name for p in paths]
+    value = choices[0] if choices else None
+    return gr.Dropdown(choices=choices, value=value)
+
+
+def _name_to_path(name: str) -> str:
+    """Resolve a bare filename back to an absolute path under tests/artifacts/."""
+    return str(PROJECT_ROOT / "tests" / "artifacts" / name)
+
+
+def on_artifact_select(name: str) -> tuple[str, dict]:
+    """Load a healing artifact by its basename."""
+    if not name:
+        return "*Select an artifact from the dropdown.*", {}
+    return load_artifact(_name_to_path(name))
+
+
+# ---------------------------------------------------------------------------
+# UI
+# ---------------------------------------------------------------------------
+
+with gr.Blocks(title="AI Testing Workbench", css=css) as demo:
+    gr.Markdown("# AI Testing Workbench")
+    gr.Markdown(
+        "Reference implementation: structured LLM outputs · "
+        "evaluation · observability · AST-based repair · explainability"
+    )
 
     with gr.Tabs():
-        with gr.Tab("Test Generator"):  # ── Tab 1: Test Generator ──────────
+        # ── Tab 1: Generation Pipeline ──────────────────────────────────────
+        with gr.Tab("Generation Pipeline"):
             with gr.Row():
                 with gr.Column(scale=3):
                     url_in = gr.Textbox(
@@ -70,22 +114,20 @@ with gr.Blocks(title="Testing LLM Automation Engine") as demo:
                         run_btn = gr.Button("Run Test", variant="secondary")
 
                 with gr.Column(scale=4):
-                    gen_timeline = gr.Markdown(
-                        "### ⏱️ Generation Timeline\n*Ready to generate...*"
-                    )
+                    gen_timeline = gr.Markdown("### Generation Timeline\n*Ready.*")
 
                 with gr.Column(scale=5):
                     with gr.Tabs():
                         with gr.Tab("Generated Code"):
                             code_out = gr.Code(
-                                label="TypeScript Code",
+                                label="TypeScript",
                                 language="typescript",
                                 lines=20,
                                 elem_classes=["tall-code"],
                             )
                         with gr.Tab("Execution Logs"):
                             result_out = gr.Textbox(
-                                label="Execution Log Output",
+                                label="Execution Log",
                                 interactive=False,
                                 lines=20,
                                 elem_classes=["tall-textbox"],
@@ -102,7 +144,60 @@ with gr.Blocks(title="Testing LLM Automation Engine") as demo:
                 outputs=[gen_timeline, result_out],
             )
 
-        with gr.Tab("Vision Agent"):  # ── Tab 2: Vision Agent ──────────────
+        # ── Tab 2: Healing Pipeline ─────────────────────────────────────────
+        with gr.Tab("Healing Pipeline"):
+            with gr.Row():
+                with gr.Column(scale=3):
+                    h_file_in = gr.File(
+                        label="Test File (.ts)",
+                        file_types=[".ts"],
+                        file_count="single",
+                    )
+                    h_max_retries_in = gr.Slider(
+                        minimum=1,
+                        maximum=5,
+                        value=3,
+                        step=1,
+                        label="Max Repair Attempts",
+                    )
+                    h_btn = gr.Button("Run Healing Pipeline", variant="primary")
+
+                with gr.Column(scale=4):
+                    h_timeline_out = gr.Markdown(
+                        "### Healing Timeline\n*Upload a test file and run.*"
+                    )
+
+                with gr.Column(scale=5):
+                    with gr.Tabs():
+                        with gr.Tab("Decision Report"):
+                            h_explanation_out = gr.Markdown(
+                                "### Healing Decision\n*No run active.*",
+                                elem_classes=["tall-md"],
+                            )
+                        with gr.Tab("Execution Logs"):
+                            h_result_out = gr.Textbox(
+                                label="Execution Log",
+                                interactive=False,
+                                lines=20,
+                                elem_classes=["tall-textbox"],
+                            )
+                        with gr.Tab("Raw JSON"):
+                            with gr.Accordion("HealingDecision JSON", open=False):
+                                h_decision_out = gr.JSON(label="Raw artifact")
+
+            h_btn.click(
+                fn=heal_test_streaming,
+                inputs=[h_file_in, h_max_retries_in],
+                outputs=[
+                    h_result_out,
+                    h_explanation_out,
+                    h_timeline_out,
+                    h_decision_out,
+                ],
+            )
+
+        # ── Tab 3: Vision Pipeline ──────────────────────────────────────────
+        with gr.Tab("Vision Pipeline"):
             with gr.Row():
                 with gr.Column(scale=3):
                     v_url_in = gr.Textbox(
@@ -122,27 +217,27 @@ with gr.Blocks(title="Testing LLM Automation Engine") as demo:
 
                 with gr.Column(scale=4):
                     v_timeline = gr.Markdown(
-                        "### ⏱️ Visual Timeline\n*Ready to capture screenshot...*"
+                        "### Vision Timeline\n*Ready to capture screenshot.*"
                     )
 
                 with gr.Column(scale=5):
                     with gr.Tabs():
-                        with gr.Tab("Captured View"):
+                        with gr.Tab("Screenshot"):
                             v_image_preview = gr.Image(
-                                label="Screenshot Preview",
+                                label="Captured Screenshot",
                                 type="filepath",
                                 interactive=False,
                             )
                         with gr.Tab("Generated Code"):
                             v_code_out = gr.Code(
-                                label="TypeScript Code",
+                                label="TypeScript",
                                 language="typescript",
                                 lines=20,
                                 elem_classes=["tall-code"],
                             )
                         with gr.Tab("Execution Logs"):
                             v_result_out = gr.Textbox(
-                                label="Execution Log Output",
+                                label="Execution Log",
                                 interactive=False,
                                 lines=20,
                                 elem_classes=["tall-textbox"],
@@ -159,56 +254,82 @@ with gr.Blocks(title="Testing LLM Automation Engine") as demo:
                 outputs=[v_timeline, v_result_out],
             )
 
-        with gr.Tab("Self-Healer"):  # ── Tab 3: Self-Healer ───────────────
+        # ── Tab 4: Artifact Inspector ───────────────────────────────────────
+        with gr.Tab("Artifact Inspector"):
+            gr.Markdown(
+                "Browse healing-decision artifacts written to `tests/artifacts/` "
+                "after each healing session. Renders the full provenance report "
+                "including model, prompt version, confidence rationale, and root-cause evidence."
+            )
+            with gr.Row():
+                artifact_dropdown = gr.Dropdown(
+                    label="Healing Decision",
+                    choices=[],
+                    value=None,
+                    interactive=True,
+                    scale=5,
+                )
+                artifact_refresh_btn = gr.Button("Refresh", scale=1)
+
             with gr.Row():
                 with gr.Column(scale=3):
-                    h_file_in = gr.File(
-                        label="Test File",
-                        file_types=[".ts"],
-                        file_count="single",
+                    artifact_md = gr.Markdown(
+                        "*Select an artifact above.*",
+                        elem_classes=["tall-md"],
                     )
-                    h_max_retries_in = gr.Slider(
-                        minimum=1,
-                        maximum=5,
-                        value=3,
-                        step=1,
-                        label="Max Healing Attempts",
-                    )
-                    h_btn = gr.Button("Heal Test", variant="primary")
+                with gr.Column(scale=2):
+                    artifact_json = gr.JSON(label="Raw JSON")
 
-                with gr.Column(scale=4):
-                    h_timeline_out = gr.Markdown(
-                        "### ⏱️ Healing Process Timeline\n*Ready to load spec and heal...*"
-                    )
+            artifact_refresh_btn.click(
+                fn=refresh_artifacts,
+                inputs=[],
+                outputs=[artifact_dropdown],
+            )
+            artifact_dropdown.change(
+                fn=on_artifact_select,
+                inputs=[artifact_dropdown],
+                outputs=[artifact_md, artifact_json],
+            )
 
-                with gr.Column(scale=5):
-                    with gr.Tabs():
-                        with gr.Tab("Explainable Report"):
-                            h_explanation_out = gr.Markdown(
-                                "### 🧠 AI Healing Explanation\n*No healer run active.*"
-                            )
-                        with gr.Tab("Execution Logs"):
-                            h_result_out = gr.Textbox(
-                                label="Execution Log Output",
-                                interactive=False,
-                                lines=20,
-                                elem_classes=["tall-textbox"],
-                            )
-                        with gr.Tab("Raw JSON Evidence"):
-                            with gr.Accordion(
-                                "Raw JSON Decision & Artifacts", open=False
-                            ):
-                                h_decision_out = gr.JSON(label="Raw JSON")
+        # ── Tab 5: Benchmark Explorer ───────────────────────────────────────
+        with gr.Tab("Benchmark Explorer"):
+            gr.Markdown(
+                "Run the heuristic failure-classification benchmark against the "
+                "`benchmarks/healing/fixtures/repair_scenarios.json` dataset. "
+                "No LLM or browser required — fully deterministic, completes in milliseconds."
+            )
+            benchmark_run_btn = gr.Button(
+                "Run Heuristic Classification Benchmark", variant="primary"
+            )
+            benchmark_out = gr.Markdown("*Click the button to run the benchmark.*")
 
-            h_btn.click(
-                fn=heal_test_streaming,
-                inputs=[h_file_in, h_max_retries_in],
-                outputs=[
-                    h_result_out,
-                    h_explanation_out,
-                    h_timeline_out,
-                    h_decision_out,
-                ],
+            benchmark_run_btn.click(
+                fn=run_classification_benchmark,
+                inputs=[],
+                outputs=[benchmark_out],
+            )
+
+        # ── Tab 6: Trace Inspector ──────────────────────────────────────────
+        with gr.Tab("Trace Inspector"):
+            gr.Markdown(
+                "Inspect JSONL traces written to `logs/traces.jsonl` by the observability "
+                "layer.  Each healing session produces session, LLM, and subprocess spans "
+                "linked by `trace_id`."
+            )
+            with gr.Row():
+                trace_load_btn = gr.Button("Load Traces", variant="primary")
+                trace_summary = gr.Label(label="Summary", value="—")
+
+            trace_out = gr.Markdown("*Click Load Traces to read `logs/traces.jsonl`.*")
+
+            def _load_traces_handler() -> tuple[str, str]:
+                body, label = load_traces()
+                return body, label
+
+            trace_load_btn.click(
+                fn=_load_traces_handler,
+                inputs=[],
+                outputs=[trace_out, trace_summary],
             )
 
 if __name__ == "__main__":
