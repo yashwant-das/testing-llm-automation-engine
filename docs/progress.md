@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 3 — Architecture Cleanup / Service Layer (COMPLETE)
-**Next Phase:** Phase 4 — Healer Decomposition
+**Phase:** Phase 4 — Healer Decomposition (COMPLETE)
+**Next Phase:** Phase 5 — AST-Based Repair
 **Blockers:** None
 
 ---
@@ -131,6 +131,41 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 
 ---
 
+### 2026-06-06 — Phase 4: Healer Decomposition ✅
+
+`healer.py` (471 lines, 8 mixed-responsibility functions) decomposed into a
+`src/healing/` package with 7 single-responsibility modules.  170/170 tests passing.
+
+**Files created:**
+
+- `src/healing/__init__.py` — public API re-exports + `attempt_healing()` non-streaming CLI orchestrator
+- `src/healing/runner.py` — `run_test()` subprocess management
+- `src/healing/evidence.py` — `extract_url_from_code()` + `gather_evidence()`
+- `src/healing/classifier.py` — `classify_failure_heuristic()`
+- `src/healing/planner.py` — `analyze_and_plan()` heuristic + LLM reasoning
+- `src/healing/repair.py` — `apply_fix()` indentation-tolerant string replacement
+- `src/healing/verifier.py` — `verify_repair()` post-repair test execution
+- `src/healing/artifact_store.py` — `emit_artifacts()` JSON persistence
+- `tests/unit_test_healing.py` — 41 new tests (zero live LLM calls, mocked subprocess)
+
+**Files updated:**
+
+- `src/agents/healer.py` — reduced to 40-line compatibility shim (re-exports from `src.healing`)
+- `src/services/healing_service.py` — imports from `src.healing` directly; uses `verify_repair()`
+- `tests/unit_test_fixer.py` — imports from `src.healing.repair` and `src.healing.evidence`
+- `tests/unit_test_classification.py` — imports from `src.healing.classifier`
+
+**Verified constraints:**
+
+- Each module has a single responsibility
+- Each module is independently importable and testable
+- Zero cross-module side effects at import time
+- `healer.py` is now a thin shim (will be deleted in Phase 5)
+
+**Debt resolved:** TD-001 partial (healer god module), TD-003 (mixed subprocess/LLM/IO concerns)
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -138,8 +173,9 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 | Phase 1 | Structured Outputs Foundation | COMPLETE |
 | Phase 2 | LLM Layer Modernization | COMPLETE |
 | Phase 3 | Architecture Cleanup (Service Layer) | COMPLETE |
-| Phase 4 | Healer Decomposition | NEXT |
-| Phase 5 | AST-Based Repair | PENDING |
+| Phase 4 | Healer Decomposition | COMPLETE |
+| Phase 5 | AST-Based Repair | NEXT |
+| Phase 5 | AST-Based Repair | NEXT |
 | Phase 6 | Context Collection | PENDING |
 | Phase 7 | Evaluation Framework | PENDING |
 | Phase 8 | Observability | PENDING |

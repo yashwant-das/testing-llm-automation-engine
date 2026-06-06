@@ -41,12 +41,13 @@ def heal_test_streaming(
     """
     from schemas.healing import ExecutionTimeline, HealingAction, HealingDecision
     from schemas.shared import FailureType
-    from src.agents.healer import (
+    from src.healing import (
         analyze_and_plan,
         apply_fix,
         emit_artifacts,
         gather_evidence,
         run_test,
+        verify_repair,
     )
     from src.utils.validation import ValidationError, validate_file_path
 
@@ -250,9 +251,7 @@ def heal_test_streaming(
             None,
         )
 
-        verify_result = run_test(validated_path)
-        decision.verification_passed = verify_result.passed
-        decision.verification_log = verify_result.output
+        verify_result = verify_repair(validated_path, decision)
 
         if decision.verification_passed:
             timeline.add_step("Verification", "Test passed on re-run")

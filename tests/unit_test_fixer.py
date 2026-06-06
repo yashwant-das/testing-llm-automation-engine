@@ -1,6 +1,6 @@
 import unittest
 
-from src.agents.healer import apply_fix
+from src.healing.repair import apply_fix
 from src.models.healing_model import (
     Evidence,
     FailureType,
@@ -123,7 +123,7 @@ if (success) {
         self.assertEqual(new_code.strip(), expected.strip())
 
     def test_extract_url_from_code(self):
-        from src.agents.healer import extract_url_from_code
+        from src.healing.evidence import extract_url_from_code
 
         code_single = "await page.goto('https://example.com/foo');"
         code_double = 'await page.goto("https://example.com/bar");'
