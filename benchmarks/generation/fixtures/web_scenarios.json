@@ -1,0 +1,71 @@
+{
+  "version": "1.0.0",
+  "description": "Generation benchmark: scenarios for evaluating generated Playwright test quality. Each scenario defines static code-quality checks applied to the generated TypeScript.",
+  "scenarios": [
+    {
+      "id": "gen-001",
+      "description": "Login form — standard username/password page",
+      "url": "https://the-internet.herokuapp.com/login",
+      "feature_description": "User can log in with valid credentials and sees the secure area",
+      "checks": {
+        "must_import": ["@playwright/test"],
+        "must_use_assertions": ["expect"],
+        "must_not_use_deprecated": ["waitForSelector", "$$", ".$"],
+        "must_contain_url": true,
+        "preferred_locators": ["getByRole", "getByLabel", "getByPlaceholder"]
+      }
+    },
+    {
+      "id": "gen-002",
+      "description": "Checkbox interaction — toggle checkboxes on the page",
+      "url": "https://the-internet.herokuapp.com/checkboxes",
+      "feature_description": "User can check and uncheck checkboxes and verify their state",
+      "checks": {
+        "must_import": ["@playwright/test"],
+        "must_use_assertions": ["expect"],
+        "must_not_use_deprecated": ["waitForSelector"],
+        "must_contain_url": true,
+        "preferred_locators": ["getByRole", "locator"]
+      }
+    },
+    {
+      "id": "gen-003",
+      "description": "Dropdown selection — choose an option from a select element",
+      "url": "https://the-internet.herokuapp.com/dropdown",
+      "feature_description": "User can select an option from a dropdown and verify the selection",
+      "checks": {
+        "must_import": ["@playwright/test"],
+        "must_use_assertions": ["expect"],
+        "must_not_use_deprecated": ["waitForSelector"],
+        "must_contain_url": true,
+        "preferred_locators": ["getByRole", "locator", "selectOption"]
+      }
+    },
+    {
+      "id": "gen-004",
+      "description": "Dynamic elements — add and remove elements on a page",
+      "url": "https://the-internet.herokuapp.com/add_remove_elements/",
+      "feature_description": "User can add elements by clicking a button and remove them, verifying counts change",
+      "checks": {
+        "must_import": ["@playwright/test"],
+        "must_use_assertions": ["expect"],
+        "must_not_use_deprecated": ["waitForSelector"],
+        "must_contain_url": true,
+        "preferred_locators": ["getByRole", "getByText", "locator"]
+      }
+    },
+    {
+      "id": "gen-005",
+      "description": "Static page — navigate and verify basic content",
+      "url": "https://example.com",
+      "feature_description": "User can navigate to the page and see the main heading",
+      "checks": {
+        "must_import": ["@playwright/test"],
+        "must_use_assertions": ["expect"],
+        "must_not_use_deprecated": ["waitForSelector"],
+        "must_contain_url": true,
+        "preferred_locators": ["getByRole", "getByText"]
+      }
+    }
+  ]
+}

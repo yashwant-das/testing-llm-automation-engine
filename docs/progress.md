@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 6 — Context Collection (COMPLETE)
-**Next Phase:** Phase 7 — Evaluation Framework
+**Phase:** Phase 7 — Evaluation Framework (COMPLETE)
+**Next Phase:** Phase 8 — Observability
 **Blockers:** None
 
 ---
@@ -272,6 +272,61 @@ ts-morph selected as the AST tool (see `docs/ast-evaluation.md` and ADR-003).
 
 ---
 
+### 2026-06-06 — Phase 7: Evaluation Framework ✅
+
+`benchmarks/` package built from scratch. Reproducible generation, healing, and
+intent-validation benchmark runners with a programmatic mutation engine and
+JSON report export. 350/350 tests passing (277 prior + 73 new).
+
+**Files created:**
+
+- `benchmarks/__init__.py` — package documentation
+- `benchmarks/mutations/mutator.py` — `MutationType` enum + 4 pure transformation
+  functions (`apply_selector_drift`, `apply_timeout_reduction`,
+  `apply_import_removal`, `apply_assertion_swap`) + `mutate()` dispatcher
+- `benchmarks/mutations/__init__.py` — re-exports public API
+- `benchmarks/generation/fixtures/web_scenarios.json` — 5 scenarios (gen-001 → gen-005)
+  covering login, checkboxes, dropdown, dynamic elements, static page
+- `benchmarks/generation/runner.py` — `evaluate_generated_code()` (pure, lexical),
+  `load_dataset()`, `run_generation_benchmark()` (injectable `generator_fn`)
+- `benchmarks/generation/__init__.py`, `benchmarks/generation/fixtures/__init__.py`
+- `benchmarks/healing/fixtures/repair_scenarios.json` — 4 cases (heal-001 → heal-004)
+  covering LOCATOR_NOT_FOUND, TIMEOUT, JAVASCRIPT_ERROR, ASSERTION_FAILED
+- `benchmarks/healing/runner.py` — `evaluate_classification()` (pure),
+  `evaluate_repair()` (pure), `load_dataset()`,
+  `run_healing_benchmark()` (classification-only or full-repair via optional `healer_fn`)
+- `benchmarks/healing/__init__.py`, `benchmarks/healing/fixtures/__init__.py`
+- `benchmarks/intent_validation/runner.py` — `evaluate_test_intent()` (pure, 6 checks),
+  `IntentCase`, `run_intent_validation()`
+- `benchmarks/intent_validation/__init__.py`, `benchmarks/intent_validation/fixtures/__init__.py`
+- `benchmarks/datasets/README.md` — dataset format spec (generation + healing schemas,
+  reproducibility requirements, FailureType reference)
+- `benchmarks/reports/.gitkeep` — report output directory
+- `tests/unit_test_evaluation.py` — 73 new tests across all evaluator modules
+
+**Files updated:**
+
+- `schemas/evaluation.py` — `EvaluationResult.duration_ms` added;
+  `BenchmarkRunConfig.{provider, benchmark_type}` added; `BenchmarkRun` extended
+  with `total`, `passed`, `failed`, `mean_duration_ms` computed fields;
+  `to_json()` and `save_report()` methods added
+- `src/utils/prompt_loader.py` — `get_prompt_hash(agent_name) -> str` added
+  (SHA-256 of prompt content, first 16 hex chars)
+
+**Key design decisions:**
+
+- All evaluator functions are **pure** — no I/O, no LLM, no browser
+- Healing runner is **classification-only by default** (fast, deterministic);
+  full repair mode is opt-in via `healer_fn` injection
+- `BenchmarkRunConfig` captures model, prompt_hash, temperature, seed, dataset_version
+  for fully reproducible runs at temperature 0
+- Mutation engine designed to produce the exact `FailureType` that the heuristic
+  classifier will detect (error logs carefully crafted to avoid false-positives)
+
+**Debt resolved:** TD-004 (no evaluation framework)
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -282,8 +337,8 @@ ts-morph selected as the AST tool (see `docs/ast-evaluation.md` and ADR-003).
 | Phase 4 | Healer Decomposition | COMPLETE |
 | Phase 5 | AST-Based Repair | COMPLETE |
 | Phase 6 | Context Collection | COMPLETE |
-| Phase 7 | Evaluation Framework | NEXT |
-| Phase 8 | Observability | PENDING |
+| Phase 7 | Evaluation Framework | COMPLETE |
+| Phase 8 | Observability | NEXT |
 | Phase 9 | Explainability | PENDING |
 | Phase 10 | UI Reposition | PENDING |
 
@@ -311,4 +366,4 @@ See `decisions.md` for all Architecture Decision Records.
 | Benchmark datasets | 0 | 3+ |
 | Observability coverage | 0% | 80%+ |
 | Test coverage (meaningful) | 4 unit tests | 50+ tests |
-| Python unit tests | 4 (Phase 0) → 261 (Phase 6) | 300+ |
+| Python unit tests | 4 (Phase 0) → 350 (Phase 7) | 300+ ✅ |
