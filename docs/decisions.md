@@ -162,7 +162,7 @@ Keep external markdown files. Add versioning via a `prompts/manifest.json` that 
 
 - **Positive:** Prompts remain diffable, human-editable, independently versioned.
 - **Negative:** File I/O on every call (mitigated by caching in prompt\_loader).
-- **Action Required:** Add `prompts/manifest.json` with version and hash fields. Update `prompt_loader.py` to expose version metadata.
+- **Resolved (Phase 9):** `prompts/manifest.json` implemented with version and hash fields. `prompt_loader.py` exposes `get_prompt_version()` and `get_prompt_hash()`. Both recorded in every `HealingDecision` artifact.
 
 ---
 
@@ -247,4 +247,148 @@ src/llm/
   all router logic unit-tested without mocking a third-party library.
 - **Negative:** If a non-OpenAI-compatible provider is needed in the future,
   the router will need a new client backend. LiteLLM remains the right choice for that case.
+- **Revisit trigger:** A third provider with a non-OpenAI-compatible API.
+
+---
+
+## ADR-008: Single browser session for context collection
+
+**Date:** 2026-06-06
+**Status:** DECIDED (Phase 6)
+
+### Context
+
+`src/context/` collects 6 types of page context for healing and generation: DOM, accessibility tree, locator candidates, console errors, network errors, and screenshot. A naive implementation launches a Playwright browser once per context type.
+
+### Decision
+
+Open exactly one Playwright browser session in `collect_context()` and pass the `page` object to all sub-collectors. Close the session after all collectors complete.
+
+### Rationale
+
+- **Browser startup is expensive** (~300–500ms per browser launch). Collecting 6 context types sequentially with separate launches adds ~2s to every healing session.
+- **Consistent page state.** If the page is loaded once and all context is collected from the same DOM snapshot, the accessibility tree and DOM are guaranteed to be consistent with each other.
+- **Simpler cleanup.** One `async with` block owns the browser lifetime — no risk of leaked browsers if a sub-collector raises.
+
+### Alternatives Rejected
+
+- **One browser per collector:** Each collector fetches a fresh page state. Adds latency and risks inconsistent snapshots across context types.
+- **Parallel collectors:** Would require multiple browser sessions or careful sharing of a single Playwright page across async tasks. No meaningful latency benefit since context collection is I/O-bound sequentially.
+
+### Consequences
+
+- **Positive:** ~300ms per healing session saved. Consistent snapshots. Easier to mock in tests (one `page` mock, not one per collector).
+- **Negative:** If one collector hangs, all subsequent collectors are blocked. Mitigated by per-collector timeouts.
+- **Testability:** All collector functions accept a `page: Page` argument — tests inject a `MagicMock()` without launching a browser.
+
+---
+
+## ADR-009: Evaluation framework design
+
+**Date:** 2026-06-06
+**Status:** DECIDED (Phase 7)
+
+### Context
+
+The evaluation framework must answer "did this change improve results?" without requiring a live LLM, live browser, or network access. The framework must be runnable in CI.
+
+### Decision
+
+Three design principles:
+
+1. **Pure evaluator functions** — no I/O, no LLM, no side effects. Inputs are the benchmark case and the output to evaluate. Output is an `EvaluationResult` Pydantic model.
+2. **Classification-only as the default benchmark** — heuristic classification is deterministic and LLM-free. The classification benchmark runs in <1s.
+3. **Injectable generator/healer functions** — LLM-dependent benchmarks accept a `generator_fn` argument so tests can inject a mock and run without a live LLM.
+
+### Rationale
+
+- Pure evaluators can be unit-tested trivially. A test that calls `evaluate_healing_case(case, output)` is deterministic and fast.
+- The classification benchmark validates the heuristic classifier without any LLM dependency — CI can run it in <1s.
+- Injectable functions allow future LLM benchmarks to be tested with mocked generators in CI, while production runs use real generators.
+
+### Alternatives Rejected
+
+- **Evaluators call the LLM to score outputs (LLM-as-judge):** Non-deterministic, expensive, requires credentials in CI.
+- **Evaluators check runtime behaviour (spawn a browser to verify the repaired test passes):** Very slow, requires a running web server, not feasible in lightweight CI.
+
+### Consequences
+
+- **Positive:** Every evaluator is unit-testable. Classification benchmark runs in CI without credentials.
+- **Negative:** Lexical checks (must_contain, must_import) are necessary simplifications. They do not validate semantic correctness.
+- **Revisit trigger:** When LLM-as-judge is needed for semantic evaluation, add it as an optional `scorer_fn` argument to runners, not as a change to existing evaluators.
+
+---
+
+## ADR-010: Thread-local session isolation for Gradio
+
+**Date:** 2026-06-06
+**Status:** DECIDED (Phase 8)
+
+### Context
+
+Gradio runs each UI event handler in its own thread. The observability tracer must maintain one active session per healing/generation run. A global `session` variable would cause race conditions when two users trigger healing simultaneously.
+
+### Decision
+
+Use `threading.local()` to store the active `TracerSession` object. Each thread has its own `_thread_local.session` attribute. The tracer reads and writes only the session for the current thread.
+
+### Rationale
+
+- Gradio's threading model is one-thread-per-event-handler — `threading.local()` is the standard Python mechanism for this pattern.
+- The alternative (asyncio) would require Gradio to support async handlers, which it does but with different semantics that complicate testing.
+- Thread-local storage is zero-dependency and has no runtime overhead.
+
+### Alternatives Rejected
+
+- **Global session with a lock:** Serializes all healing sessions — unacceptable latency.
+- **Session ID passed explicitly through every function:** Would require changing every pipeline function signature.
+- **asyncio + contextvars:** More semantically correct for async code, but Gradio's event system uses threads, not coroutines.
+
+### Consequences
+
+- **Positive:** Complete isolation between concurrent healing sessions. No lock contention.
+- **Negative:** Thread-local state is not visible across threads — if a session spawns a worker thread, that worker cannot see the tracer session. Currently not an issue since the pipeline is single-threaded per healing run.
+- **Testability:** Tests that call `start_session()` must reset `_thread_local.session = None` in `tearDown` to avoid state leakage between tests running in the same thread.
+
+---
+
+## ADR-011: Healer decomposition into 7 modules
+
+**Date:** 2026-06-06
+**Status:** DECIDED (Phase 4)
+
+### Context
+
+The original `src/agents/healer.py` was a god module: 600+ lines mixing failure classification, evidence gathering, LLM prompt construction, LLM response parsing, AST repair, string repair, verification, and artifact persistence.
+
+### Decision
+
+Decompose `src/agents/healer.py` into 7 focused modules in `src/healing/`:
+
+| Module | Single Responsibility |
+| --- | --- |
+| `classifier.py` | Heuristic failure classification |
+| `evidence.py` | Evidence → HealingDecision field extraction |
+| `planner.py` | LLM prompt construction and response parsing |
+| `repair.py` | AST and string repair dispatch |
+| `verifier.py` | Playwright test re-run and result parsing |
+| `artifact_store.py` | JSON artifact persistence |
+| `runner.py` | Orchestration — calls the 6 above in sequence |
+
+### Rationale
+
+- Each module is independently testable. `classifier.py` tests need no mocks. `planner.py` tests mock only the LLM router. `repair.py` tests mock only the subprocess.
+- The single-responsibility boundary makes it clear where to add a new capability: new failure pattern → `classifier.py`; new repair strategy → `repair.py`; new provenance field → `planner.py` and `artifact_store.py`.
+- `runner.py` becomes the only module that knows the full healing sequence. It is thin — no business logic, only sequencing.
+
+### Alternatives Rejected
+
+- **Keep god module, add tests:** The test surface is the full 600-line module — every test must mock everything.
+- **2-module split (classifier + healer):** Still leaves planner, repair, and verifier mixed — the most complex code stays in one place.
+
+### Consequences
+
+- **Positive:** 440 unit tests, with test files per module. Adding a repair strategy requires touching `repair.py` and `ast_repair.js` only. Architecture matches the documentation.
+- **Negative:** One additional import hop — callers import from `src.healing.runner`, not `src.agents.healer`. Old import paths were updated across the codebase.
+- **Revisit trigger:** None planned.
 - **Revisit trigger:** A third provider with a non-OpenAI-compatible API.

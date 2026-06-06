@@ -215,11 +215,53 @@
 
 ---
 
+## Post-Phase 10 Scores — 2026-06-06
+
+| Category | Score | Change |
+| --- | --- | --- |
+| Structured Outputs | 9 | +8 (Phases 1, 9) |
+| Evaluation Framework | 8 | +8 (Phase 7) |
+| Observability | 8 | +7 (Phase 8) |
+| Explainability | 8 | +4 (Phase 9) |
+| Determinism | 8 | +5 (Phases 2, 5, 7, 9) |
+| Local LLM Support | 8 | +3 (Phase 2) |
+| Architecture | 8 | +5 (Phases 2, 3, 4, 6) |
+| Documentation | 7 | +3 (Phases 0, 10) |
+| Testing | 8 | +5 (Phases 1, 7, 8, 9) |
+| Maintainability | 8 | +5 (Phases 2, 3, 4) |
+| **Total** | **80/100** | **+53** |
+
+Note: Documentation held at 7 — the Phase 10 UI reposition added engineering tabs and improved the workbench, but the documentation suite itself was still pre-Phase 11.
+
+---
+
+## Post-Phase 11 Scores — 2026-06-06
+
+| Category | Score | Change |
+| --- | --- | --- |
+| Structured Outputs | 9 | — |
+| Evaluation Framework | 8 | — |
+| Observability | 8 | — |
+| Explainability | 8 | — |
+| Determinism | 8 | — |
+| Local LLM Support | 8 | — |
+| Architecture | 8 | — |
+| Documentation | 9 | +2 (Phase 11) |
+| Testing | 8 | — |
+| Maintainability | 8 | — |
+| **Total** | **82/100** | **+2** |
+
+Phase 11 improvements: README rewritten, full architecture docs (7 files with Mermaid diagrams), AI systems engineering guide, evaluation docs (5 files), prompt docs (4 files), developer docs (6 files), ADRs extended to ADR-011, technical debt fully resolved.
+
+---
+
 ## Score History
 
 | Date | Total | Notes |
 | --- | --- | --- |
 | 2026-06-06 | 27/100 | Baseline — Phase 0 audit complete |
+| 2026-06-06 | 80/100 | Post-Phase 10 — UI reposition complete |
+| 2026-06-06 | 82/100 | Post-Phase 11 — Documentation Modernization complete |
 
 ---
 
@@ -233,4 +275,5 @@
 | Phase 5 | 62/100 | +5 determinism, +3 explainability |
 | Phase 7 | 73/100 | +8 evaluation framework, +3 testing |
 | Phases 8+9 | 80/100 | +7 observability, +4 explainability |
-| Phase 10 | 83/100 | +3 documentation |
+| Phase 10 | 80/100 | UI reposition — engineering workbench framing |
+| Phase 11 | 82/100 | +2 documentation |
