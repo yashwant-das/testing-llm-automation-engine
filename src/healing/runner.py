@@ -8,6 +8,7 @@ subprocess output.
 
 import logging
 import subprocess
+import time
 from pathlib import Path
 
 from schemas.shared import RunResult
@@ -28,20 +29,42 @@ def run_test(test_file) -> RunResult:
         property (returncode == 0).
     """
     logger.info("Running %s...", test_file)
+    command = f"npx playwright test {test_file}"
+    t0 = time.monotonic()
     try:
-        result = subprocess.run(
+        proc = subprocess.run(
             ["npx", "playwright", "test", str(test_file)],
             capture_output=True,
             text=True,
             timeout=60,
             cwd=str(PROJECT_ROOT),
         )
-        return RunResult(
-            returncode=result.returncode,
-            stdout=result.stdout or "",
-            stderr=result.stderr or "",
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        run_result = RunResult(
+            returncode=proc.returncode,
+            stdout=proc.stdout or "",
+            stderr=proc.stderr or "",
         )
+        exit_code = proc.returncode
     except subprocess.TimeoutExpired:
-        return RunResult.from_timeout()
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        run_result = RunResult.from_timeout()
+        exit_code = -1
     except FileNotFoundError:
-        return RunResult.from_error("Playwright not found")
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        run_result = RunResult.from_error("Playwright not found")
+        exit_code = -2
+
+    # Observability — record subprocess span; silently no-op when no session is active.
+    try:
+        from src.observability import get_tracer
+
+        get_tracer().record_subprocess(
+            command=command,
+            exit_code=exit_code,
+            latency_ms=latency_ms,
+        )
+    except Exception:
+        pass  # Observability must never break the main path.
+
+    return run_result

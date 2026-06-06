@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 7 — Evaluation Framework (COMPLETE)
-**Next Phase:** Phase 8 — Observability
+**Phase:** Phase 8 — Observability (COMPLETE)
+**Next Phase:** Phase 9 — Explainability
 **Blockers:** None
 
 ---
@@ -327,6 +327,66 @@ JSON report export. 350/350 tests passing (277 prior + 73 new).
 
 ---
 
+### 2026-06-06 — Phase 8: Observability ✅
+
+Zero-dependency JSONL tracer built in `src/observability/`.  Every LLM call and
+Playwright subprocess call is now linked to a healing session via `trace_id`.
+Traces are written to `logs/traces.jsonl` and queryable with `jq`.
+393/393 tests passing (350 prior + 43 new).
+
+**Files created:**
+
+- `docs/observability-evaluation.md` — full tool comparison (OpenTelemetry vs
+  Langfuse self-hosted vs Langfuse cloud vs custom JSONL)
+- `src/observability/__init__.py` — `get_tracer()`, `configure_tracer()`, public API
+- `src/observability/schemas.py` — `SubprocessSpan`, `SessionSpan`, `TraceSession`;
+  re-exports `TraceMetadata` from `schemas/artifacts`
+- `src/observability/writer.py` — `TraceWriter` (thread-safe JSONL appender + `read_all()`)
+- `src/observability/tracer.py` — `Tracer` (thread-local sessions) + `NullTracer` (no-op default)
+- `logs/.gitkeep` — trace output directory
+- `tests/unit_test_observability.py` — 43 new tests
+
+**Files updated:**
+
+- `schemas/artifacts.py` — `TraceMetadata` model added (trace_id, operation_id, model,
+  prompt_version, prompt_hash, input/output tokens, latency_ms, retry_count)
+- `docs/decisions.md` — ADR-004 updated from UNDER INVESTIGATION → DECIDED
+- `src/llm/router.py` — `_build_response()` calls `get_tracer().record_llm_response(response)`
+  after every successful LLM call (silently no-ops when no session is active)
+- `src/healing/runner.py` — `run_test()` wraps subprocess with `time.monotonic()` and
+  calls `get_tracer().record_subprocess(command, exit_code, latency_ms)`
+- `src/services/healing_service.py` — `start_session("healing")` at function entry;
+  `set_prompt_context("healer", hash)` before each `analyze_and_plan()` call;
+  `end_session(trace_id, success=...)` at every exit point (5 exit paths covered)
+
+**Design decisions:**
+
+- **Zero new dependencies** — LLMRouter already captured all required signals in
+  `LLMResponse`; the tracer only persists and links them
+- **Thread-local session isolation** — Gradio handlers run on separate threads;
+  `threading.local()` ensures sessions never cross-contaminate
+- **NullTracer default** — all instrumentation points are safe to call before
+  `configure_tracer()` is invoked; no code path can fail due to uninitialised tracer
+- **Observability must never break main path** — all `get_tracer()` calls in router
+  and runner are wrapped in `try/except` so a tracer bug cannot break healing
+
+**Querying traces:**
+
+```bash
+# Total tokens per healing session
+jq 'select(.span_type == "session") | {trace_id, total_input_tokens, total_output_tokens}' logs/traces.jsonl
+
+# LLM calls with retries
+jq 'select(.span_type == "llm" and .retry_count > 0)' logs/traces.jsonl
+
+# Slowest Playwright runs
+jq 'select(.span_type == "subprocess") | {command, latency_ms}' logs/traces.jsonl
+```
+
+**Debt resolved:** TD-005 (no observability)
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -338,8 +398,8 @@ JSON report export. 350/350 tests passing (277 prior + 73 new).
 | Phase 5 | AST-Based Repair | COMPLETE |
 | Phase 6 | Context Collection | COMPLETE |
 | Phase 7 | Evaluation Framework | COMPLETE |
-| Phase 8 | Observability | NEXT |
-| Phase 9 | Explainability | PENDING |
+| Phase 8 | Observability | COMPLETE |
+| Phase 9 | Explainability | NEXT |
 | Phase 10 | UI Reposition | PENDING |
 
 ---
@@ -366,4 +426,4 @@ See `decisions.md` for all Architecture Decision Records.
 | Benchmark datasets | 0 | 3+ |
 | Observability coverage | 0% | 80%+ |
 | Test coverage (meaningful) | 4 unit tests | 50+ tests |
-| Python unit tests | 4 (Phase 0) → 350 (Phase 7) | 300+ ✅ |
+| Python unit tests | 4 (Phase 0) → 393 (Phase 8) | 300+ ✅ |

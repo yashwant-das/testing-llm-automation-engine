@@ -96,30 +96,46 @@ Full evaluation recorded in `docs/ast-evaluation.md`.
 ## ADR-004: Observability tool selection
 
 **Date:** 2026-06-06
-**Status:** UNDER INVESTIGATION
+**Status:** DECIDED
 
 ### Context
 
 No observability exists. Token usage, latency, retry counts, and failure patterns are invisible. Running a healing session produces JSON artifacts but no queryable traces.
 
+Full evaluation recorded in `docs/observability-evaluation.md`.
+
 ### Decision
 
-Pending evaluation. Candidates: OpenTelemetry + Jaeger/OTLP, Langfuse (self-hosted), stdout OTEL exporter.
+**Custom JSONL Tracer** (`src/observability/`) — zero new dependencies.
 
-### Evaluation Criteria
+Span types: `TraceMetadata` (LLM call), `SubprocessSpan` (Playwright subprocess),
+`SessionSpan` (end-to-end healing/generation session). All spans written to
+`logs/traces.jsonl` as newline-delimited JSON, queryable with `jq`.
 
-- Local-first (no cloud dependency required)
-- Python SDK maturity
-- LLM-specific signals (token count, model name, prompt version)
-- Developer ergonomics for a single-engineer project
+### Rationale
 
-### Preliminary Assessment
+- `LLMRouter` already captures all required signals in `LLMResponse`. The tracer
+  only needs to persist and link them.
+- Adding `opentelemetry-sdk` (~5 MB) violates "prefer deletion over addition".
+- Langfuse self-hosted requires Docker — incompatible with single-command startup.
+- JSONL + `jq` satisfies all query needs for a single-engineer project.
 
-- **OpenTelemetry (stdout exporter):** Zero dependency, always available, queryable with jq. No UI but maximum portability.
-- **Langfuse (self-hosted):** LLM-native traces with prompt/completion view, cost tracking, evaluation UI. Requires Docker.
-- **Langfuse (cloud):** Same features, no Docker, but data leaves the machine. Acceptable for non-sensitive workloads.
+### Alternatives Rejected
 
-Preliminary recommendation: **Start with OpenTelemetry stdout exporter** as zero-dependency baseline; add Langfuse as optional enhancement once the instrumentation layer is in place.
+- **OpenTelemetry SDK:** Appropriate if multiple exporters or backend integration is
+  needed. Revisit when the project gains a second engineer.
+- **Langfuse self-hosted:** Revisit when a web trace UI becomes a priority.
+- **Langfuse cloud:** Rejected — data exfiltration risk for test code.
+
+### Consequences
+
+- **Positive:** Zero new dependencies; local-first; human-readable; queryable with jq.
+- **Negative:** No web UI; no alerting; no cost aggregation dashboard.
+- **Upgrade path:** Span schemas designed to be compatible with OTEL semantic
+  conventions. Swap `TraceWriter` for a `LangfuseExporter` to migrate without
+  changing the tracer API.
+- **Revisit trigger:** Project gains a second engineer, or web-based trace UI
+  becomes a requirement.
 
 ---
 

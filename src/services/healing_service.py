@@ -49,12 +49,17 @@ def heal_test_streaming(
         run_test,
         verify_repair,
     )
+    from src.observability import get_tracer
     from src.utils.validation import ValidationError, validate_file_path
+
+    _tracer = get_tracer()
+    _trace_id = _tracer.start_session("healing")
 
     timeline_md = "### ⏱️ Healing Process Timeline\n\n"
 
     # --- Guard: no file ---
     if file_obj is None:
+        _tracer.end_session(_trace_id, success=False)
         yield (
             "Please upload a test file.",
             _EXPLANATION_PENDING,
@@ -77,6 +82,7 @@ def heal_test_streaming(
         yield ("Initializing healing...", _EXPLANATION_PENDING, timeline_md, None)
 
     except ValidationError as exc:
+        _tracer.end_session(_trace_id, success=False)
         yield (
             f"Validation Error: {exc}",
             _EXPLANATION_PENDING,
@@ -85,6 +91,7 @@ def heal_test_streaming(
         )
         return
     except Exception as exc:
+        _tracer.end_session(_trace_id, success=False)
         yield (
             f"Error: {exc}",
             _EXPLANATION_PENDING,
@@ -121,6 +128,7 @@ def heal_test_streaming(
             verification_passed=True,
         )
         emit_artifacts(success_decision, timeline)
+        _tracer.end_session(_trace_id, success=True)
 
         yield (
             "Test passed (No healing needed).",
@@ -183,6 +191,13 @@ def heal_test_streaming(
             timeline_md,
             None,
         )
+
+        try:
+            from src.utils.prompt_loader import get_prompt_hash
+
+            _tracer.set_prompt_context("healer", get_prompt_hash("healer"))
+        except Exception:
+            pass
 
         decision = analyze_and_plan(validated_path, current_code, evidence)
         latest_decision = decision
@@ -265,6 +280,7 @@ def heal_test_streaming(
         emit_artifacts(decision, timeline)
 
         if decision.verification_passed:
+            _tracer.end_session(_trace_id, success=True)
             yield (
                 f"SUCCESS: Test healed!\nReasoning: {decision.hypothesis}",
                 decision.to_markdown(),
@@ -282,6 +298,7 @@ def heal_test_streaming(
         "HealingFailed", f"Exhausted {max_retries} attempts without success"
     )
     timeline_md += "🔴 **Healing Failed**: Bounded execution limit reached without achieving verification pass.\n\n"
+    _tracer.end_session(_trace_id, success=False)
 
     md_report = (
         latest_decision.to_markdown() if latest_decision else "### Healing Failed"

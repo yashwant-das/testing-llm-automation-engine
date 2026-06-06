@@ -359,7 +359,7 @@ class LLMRouter:
             retry_count,
         )
 
-        return LLMResponse(
+        response = LLMResponse(
             content=content,
             model_used=model_used,
             provider=provider,
@@ -368,6 +368,16 @@ class LLMRouter:
             output_tokens=output_tokens,
             retry_count=retry_count,
         )
+
+        # Observability — record span; silently no-op when no session is active.
+        try:
+            from src.observability import get_tracer
+
+            get_tracer().record_llm_response(response)
+        except Exception:
+            pass  # Observability must never break the main path.
+
+        return response
 
     # ------------------------------------------------------------------
     # Factory

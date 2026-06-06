@@ -52,6 +52,7 @@ playwright/.cache/
 # Logs
 *.log
 logs/
+!logs/.gitkeep
 
 # OS
 .DS_Store
