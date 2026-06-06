@@ -23,7 +23,7 @@ LM_STUDIO_VISION_MODEL=qwen/qwen3-vl-30b
 # Optional Ollama-compatible configuration
 LLM_PROVIDER=lm_studio
 OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=qwen3-coder:latest
+OLLAMA_MODEL=gemma4:26b
 OLLAMA_VISION_MODEL=qwen3-vl:30b
 ```
 
@@ -69,7 +69,7 @@ OLLAMA_VISION_MODEL=qwen3-vl:30b
 ### `OLLAMA_MODEL`
 
 - **Type**: String
-- **Default**: `qwen3-coder:latest`
+- **Default**: `gemma4:26b`
 - **Description**: Text generation model name for Ollama.
 
 ### `OLLAMA_VISION_MODEL`
@@ -91,6 +91,6 @@ LLM_PROVIDER=lm_studio
 OLLAMA_URL=http://localhost:11434/v1
 LM_STUDIO_MODEL=qwen/qwen3-coder-30b
 LM_STUDIO_VISION_MODEL=qwen/qwen3-vl-30b
-OLLAMA_MODEL=qwen3-coder:latest
+OLLAMA_MODEL=gemma4:26b
 OLLAMA_VISION_MODEL=qwen3-vl:30b
 ```

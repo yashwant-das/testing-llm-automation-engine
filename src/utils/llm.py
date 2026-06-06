@@ -27,7 +27,7 @@ LLM_PROVIDER = os.getenv("LLM_PROVIDER", "lm_studio").lower()
 LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "qwen/qwen3-coder-30b")
 LM_STUDIO_VISION_MODEL = os.getenv("LM_STUDIO_VISION_MODEL", "qwen/qwen3-vl-30b")
 
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "qwen3-coder:latest")
+OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:26b")
 OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:30b")
 
 # Initialize client based on provider
