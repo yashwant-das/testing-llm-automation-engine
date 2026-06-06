@@ -36,7 +36,7 @@ docker run -p 7860:7860 \
 Access the Gradio interface at `http://localhost:7860`.
 
 > [!TIP]
-> Use the **Self-Healer** tab in the UI for a visual experience of the healing pipeline described below.
+> Use the **Healing Pipeline** tab in the UI for a visual experience of the healing pipeline described below.
 
 ### With Environment File
 

@@ -53,7 +53,7 @@ See ADR-007 for the implemented decision.
 sliding-window indentation normalization. Structural repairs (add import, rename locator
 across file, change test structure) are not possible without AST access.
 
-Full evaluation recorded in `docs/ast-evaluation.md`.
+Full evaluation recorded in `docs/history/ast-evaluation.md`.
 
 ### Decision
 
@@ -102,7 +102,7 @@ Full evaluation recorded in `docs/ast-evaluation.md`.
 
 No observability exists. Token usage, latency, retry counts, and failure patterns are invisible. Running a healing session produces JSON artifacts but no queryable traces.
 
-Full evaluation recorded in `docs/observability-evaluation.md`.
+Full evaluation recorded in `docs/history/observability-evaluation.md`.
 
 ### Decision
 
