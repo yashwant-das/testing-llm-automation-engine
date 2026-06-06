@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 5 — AST-Based Repair (COMPLETE)
-**Next Phase:** Phase 6 — Context Collection
+**Phase:** Phase 6 — Context Collection (COMPLETE)
+**Next Phase:** Phase 7 — Evaluation Framework
 **Blockers:** None
 
 ---
@@ -127,7 +127,66 @@ Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRo
 
 ---
 
-## Current Work
+### 2026-06-06 — Phase 6: Context Collection ✅
+
+`fetch_page_context()` (HTML-only) replaced by `src/context/` package that
+collects HTML, ARIA accessibility tree, console errors, network failures, and
+locator candidates in a **single browser session**.  Generator and healer now
+both consume `ContextSnapshot` via `collector.collect_context()`.
+261/261 tests passing (161 Python + 100 prior subtests).
+
+**Files created:**
+
+- `src/context/__init__.py` — public API (`collect_context`, `capture_screenshot`,
+  `capture_from_page`)
+- `src/context/dom.py` — `collect_dom(page)` cleans HTML via BeautifulSoup
+- `src/context/accessibility.py` — `collect_accessibility_tree(page)`,
+  `format_accessibility_snapshot(dict)` — ARIA tree as indented text
+- `src/context/locator_candidates.py` — `extract_locator_candidates(dict)` —
+  `getByRole()` strings from interactive elements in the a11y tree
+- `src/context/console.py` — `attach_console_listener(page)` — captures
+  errors/warnings before `goto()`
+- `src/context/network.py` — `attach_network_listener(page)` — captures failed
+  requests before `goto()`
+- `src/context/screenshot.py` — `capture_screenshot(url, dir)` (own session),
+  `capture_from_page(page, dir)` (existing session)
+- `src/context/collector.py` — `collect_context(url, **flags)` — single-session
+  unified collection; always returns a `ContextSnapshot`, never raises
+- `tests/unit_test_context.py` — 72 new tests (all modules; mocked Playwright;
+  no live browser calls)
+
+**Files updated:**
+
+- `schemas/artifacts.py` — `ContextSnapshot.is_empty` property added; docstring
+  updated from "stub" to "implemented"
+- `schemas/healing.py` — `Evidence` extended with `console_errors`,
+  `network_errors`, `accessibility_tree`, `locator_candidates`;
+  `Evidence.from_context_snapshot()` classmethod added
+- `src/healing/evidence.py` — `gather_evidence()` uses `collect_context()`;
+  full `ContextSnapshot` flows into `Evidence.from_context_snapshot()`
+- `src/healing/planner.py` — LLM prompt extended with a11y tree, locator
+  candidates, console errors, network errors when present
+- `src/agents/generator.py` — uses `collect_context()` instead of
+  `fetch_page_context()`; PAGE CONTEXT includes HTML + a11y tree +
+  locator candidates + console errors
+- `src/services/vision_service.py` — inline Playwright screenshot block replaced
+  with `capture_screenshot()` from `src.context.screenshot`;
+  `sync_playwright` and `time` imports removed
+- `src/utils/browser.py` — `fetch_page_context()` deprecated with
+  `DeprecationWarning`; delegates to `collect_context()` (shim for backward
+  compatibility; will be removed in Phase 7)
+- `tests/unit_test_healing.py` — `TestGatherEvidence` updated to mock
+  `src.healing.evidence.collect_context` instead of the removed
+  `fetch_page_context`
+
+**Architecture benefit:**
+
+- Browser starts once per `collect_context()` call, not once per context type
+- Accessibility tree exposes stable roles/names → better locators than raw HTML
+- Console and network errors now reach the healer's LLM prompt for richer
+  diagnosis of CORS failures, missing resources, etc.
+
+**Debt resolved:** TD-007 (HTML-only context), TD-012 (duplicate screenshot capture)
 
 ---
 
@@ -222,8 +281,8 @@ ts-morph selected as the AST tool (see `docs/ast-evaluation.md` and ADR-003).
 | Phase 3 | Architecture Cleanup (Service Layer) | COMPLETE |
 | Phase 4 | Healer Decomposition | COMPLETE |
 | Phase 5 | AST-Based Repair | COMPLETE |
-| Phase 6 | Context Collection | NEXT |
-| Phase 7 | Evaluation Framework | PENDING |
+| Phase 6 | Context Collection | COMPLETE |
+| Phase 7 | Evaluation Framework | NEXT |
 | Phase 8 | Observability | PENDING |
 | Phase 9 | Explainability | PENDING |
 | Phase 10 | UI Reposition | PENDING |
@@ -252,3 +311,4 @@ See `decisions.md` for all Architecture Decision Records.
 | Benchmark datasets | 0 | 3+ |
 | Observability coverage | 0% | 80%+ |
 | Test coverage (meaningful) | 4 unit tests | 50+ tests |
+| Python unit tests | 4 (Phase 0) → 261 (Phase 6) | 300+ |

@@ -4,7 +4,7 @@ Unit tests for the src/healing/ package.
 Each module is tested in isolation:
   TestRunTest           — runner.run_test()           (mocked subprocess)
   TestExtractUrl        — evidence.extract_url_from_code()
-  TestGatherEvidence    — evidence.gather_evidence()  (mocked fetch_page_context)
+  TestGatherEvidence    — evidence.gather_evidence()  (mocked collect_context)
   TestClassifier        — classifier.classify_failure_heuristic()  (smoke)
   TestAnalyzeAndPlan    — planner.analyze_and_plan()  (mocked LLMRouter)
   TestVerifyRepair      — verifier.verify_repair()    (mocked run_test)
@@ -165,32 +165,69 @@ test('login', async ({ page }) => {
 
 
 class TestGatherEvidence(unittest.TestCase):
-    @patch("src.healing.evidence.fetch_page_context", return_value=None)
-    def test_stderr_preferred_over_stdout(self, _mock_fetch):
+    """gather_evidence() tests — collect_context is mocked to avoid real browser."""
+
+    def _no_op_collect(self, url, **kwargs):
+        """Return an empty ContextSnapshot so no browser is launched."""
+        from schemas.artifacts import ContextSnapshot
+
+        return ContextSnapshot(url=url)
+
+    def test_stderr_preferred_over_stdout(self):
         result = RunResult(
             returncode=1, stdout="stdout content", stderr="stderr content"
         )
-        with patch.object(Path, "exists", return_value=False):
-            evidence = gather_evidence("non_existent.spec.ts", result)
+        with patch(
+            "src.healing.evidence.collect_context", side_effect=self._no_op_collect
+        ):
+            with patch.object(Path, "exists", return_value=False):
+                evidence = gather_evidence("non_existent.spec.ts", result)
         self.assertEqual(evidence.error_log, "stderr content")
 
-    @patch("src.healing.evidence.fetch_page_context", return_value=None)
-    def test_stdout_used_when_no_stderr(self, _mock_fetch):
+    def test_stdout_used_when_no_stderr(self):
         result = RunResult(returncode=1, stdout="stdout content", stderr="")
-        with patch.object(Path, "exists", return_value=False):
-            evidence = gather_evidence("non_existent.spec.ts", result)
+        with patch(
+            "src.healing.evidence.collect_context", side_effect=self._no_op_collect
+        ):
+            with patch.object(Path, "exists", return_value=False):
+                evidence = gather_evidence("non_existent.spec.ts", result)
         self.assertEqual(evidence.error_log, "stdout content")
 
-    @patch("src.healing.evidence.fetch_page_context", return_value=None)
-    def test_no_screenshot_when_results_dir_missing(self, _mock_fetch):
+    def test_no_screenshot_when_results_dir_missing(self):
         result = RunResult(returncode=1, stdout="err", stderr="")
-        with patch.object(Path, "exists", return_value=False):
-            evidence = gather_evidence("non_existent.spec.ts", result)
+        with patch(
+            "src.healing.evidence.collect_context", side_effect=self._no_op_collect
+        ):
+            with patch.object(Path, "exists", return_value=False):
+                evidence = gather_evidence("non_existent.spec.ts", result)
         self.assertIsNone(evidence.screenshot_path)
 
-    @patch("src.healing.evidence.fetch_page_context", return_value="<html>live</html>")
-    def test_dom_snippet_populated_from_live_page(self, _mock_fetch):
-        # Write a temp file containing a page.goto() call
+    def test_dom_snippet_populated_from_live_page(self):
+        """collect_context() result propagates to evidence.dom_snippet."""
+        from schemas.artifacts import ContextSnapshot
+
+        def mock_collect(url, **kwargs):
+            return ContextSnapshot(url=url, html="<html>live</html>")
+
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".spec.ts", delete=False
+        ) as tmp:
+            tmp.write("await page.goto('https://example.com');")
+            tmp_path = tmp.name
+
+        result = RunResult(returncode=1, stdout="err", stderr="")
+        with patch("src.healing.evidence.collect_context", side_effect=mock_collect):
+            evidence = gather_evidence(tmp_path, result)
+
+        self.assertIsNotNone(evidence.dom_snippet)
+        self.assertEqual(evidence.dom_snippet, "<html>live</html>")
+
+        import os
+
+        os.unlink(tmp_path)
+
+    def test_dom_snippet_empty_when_context_fails(self):
+        """When collect_context returns empty snapshot, dom_snippet is None."""
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".spec.ts", delete=False
         ) as tmp:
@@ -199,33 +236,12 @@ class TestGatherEvidence(unittest.TestCase):
 
         result = RunResult(returncode=1, stdout="err", stderr="")
         with patch(
-            "src.healing.evidence.Path.exists",
-            side_effect=lambda: True,
+            "src.healing.evidence.collect_context",
+            side_effect=self._no_op_collect,
         ):
             evidence = gather_evidence(tmp_path, result)
 
-        # fetch_page_context was called and returned the dom
-        self.assertIsNotNone(evidence.dom_snippet)
-        self.assertEqual(evidence.dom_snippet, "<html>live</html>")
-
-        import os
-
-        os.unlink(tmp_path)
-
-    @patch(
-        "src.healing.evidence.fetch_page_context",
-        return_value="Error: connection refused",
-    )
-    def test_dom_snippet_discarded_on_fetch_error(self, _mock_fetch):
-        with tempfile.NamedTemporaryFile(
-            mode="w", suffix=".spec.ts", delete=False
-        ) as tmp:
-            tmp.write("await page.goto('https://example.com');")
-            tmp_path = tmp.name
-
-        result = RunResult(returncode=1, stdout="err", stderr="")
-        evidence = gather_evidence(tmp_path, result)
-        # The error string should have been discarded
+        # Empty snapshot → dom_snippet is None
         self.assertIsNone(evidence.dom_snippet)
 
         import os

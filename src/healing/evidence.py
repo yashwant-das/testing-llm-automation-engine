@@ -3,7 +3,8 @@ Evidence collection — gathers diagnostic artifacts after a Playwright test fai
 
 Single responsibility: given a failing RunResult and the test file path, produce
 an Evidence object containing error logs, the most recent failure screenshot (if
-any), and a live DOM snippet from the page under test.
+any), and live page context (HTML, accessibility tree, console errors, network
+failures, locator candidates) from the URL in the test file.
 """
 
 import logging
@@ -13,7 +14,7 @@ from typing import Optional
 
 from schemas.healing import Evidence
 from schemas.shared import RunResult
-from src.utils.browser import fetch_page_context
+from src.context import collect_context
 
 logger = logging.getLogger(__name__)
 
@@ -39,43 +40,60 @@ def extract_url_from_code(code: str) -> Optional[str]:
 
 
 def gather_evidence(test_file, result: RunResult) -> Evidence:
-    """Collect evidence from a failed test run: logs, screenshot, DOM snippet.
+    """Collect evidence from a failed test run: logs, screenshot, and page context.
+
+    Uses ``src.context.collect_context()`` to open a single browser session and
+    collect HTML, accessibility tree, console errors, network failures, and
+    locator candidates from the URL extracted from the test file.
 
     Args:
         test_file: Path-like pointing to the failing .spec.ts file.
         result:    RunResult from the most recent test execution.
 
     Returns:
-        Evidence with error_log, optional screenshot_path, optional dom_snippet.
+        Evidence populated with all available context; degrades gracefully when
+        the URL cannot be extracted or the page is unreachable.
     """
     logs = result.stderr if result.stderr else result.stdout
 
-    # Most recent screenshot written to test-results/ by Playwright
-    screenshot_path = None
+    # Most recent screenshot written to test-results/ by Playwright on failure
+    screenshot_path: Optional[str] = None
     results_dir = PROJECT_ROOT / "test-results"
     if results_dir.exists():
         screenshots = list(results_dir.glob("**/*.png"))
         if screenshots:
             screenshot_path = str(max(screenshots, key=lambda p: p.stat().st_mtime))
 
-    # Live DOM from the URL in the test file
-    dom_snippet = None
+    # Extract target URL from the test file source
+    url: Optional[str] = None
     try:
         test_file_path = Path(test_file)
         if test_file_path.exists():
             code = test_file_path.read_text(encoding="utf-8")
             url = extract_url_from_code(code)
-            if url:
-                logger.info("Fetching DOM context from %s...", url)
-                dom_snippet = fetch_page_context(url)
-                if dom_snippet and dom_snippet.startswith("Error"):
-                    logger.warning("Failed to fetch DOM context: %s", dom_snippet)
-                    dom_snippet = None
     except Exception as exc:
-        logger.warning("Error gathering DOM context evidence: %s", exc)
+        logger.warning("Could not read test file for URL extraction: %s", exc)
+
+    if url:
+        try:
+            logger.info("Collecting page context from %s...", url)
+            snapshot = collect_context(
+                url,
+                capture_html=True,
+                capture_a11y=True,
+                capture_screenshot=False,  # Playwright's own screenshot is preferred
+                capture_console=True,
+                capture_network=True,
+            )
+            return Evidence.from_context_snapshot(
+                error_log=logs,
+                snapshot=snapshot,
+                screenshot_path=screenshot_path,  # Playwright failure screenshot wins
+            )
+        except Exception as exc:
+            logger.warning("Context collection failed: %s", exc)
 
     return Evidence(
         error_log=logs,
         screenshot_path=screenshot_path,
-        dom_snippet=dom_snippet,
     )

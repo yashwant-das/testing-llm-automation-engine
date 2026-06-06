@@ -9,8 +9,6 @@ import base64
 import logging
 import os
 import re
-import time
-from datetime import datetime
 from pathlib import Path
 from typing import Iterator, Optional
 
@@ -36,11 +34,9 @@ def analyze_visual_streaming(
     Yields:
         (timeline_markdown, screenshot_path_or_None, code_or_empty)
     """
-    from playwright.sync_api import sync_playwright
-
     from schemas.generation import GenerationResult
+    from src.context.screenshot import capture_screenshot
     from src.llm import get_default_router
-    from src.utils.browser import extract_domain
     from src.utils.llm import _extract_code_block
     from src.utils.prompt_loader import load_prompt
     from src.utils.validation import (
@@ -69,33 +65,25 @@ def analyze_visual_streaming(
         yield timeline + f"🔴 **Error**: {exc}", None, f"Error: {exc}"
         return
 
-    # --- Build screenshot path ---
+    # --- Capture screenshot ---
     timeline += (
         "🟢 **Chromium Browser Initialization**: Pre-heating headless runner...\n\n"
     )
     yield timeline, None, ""
 
-    SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
-    domain = extract_domain(validated_url)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     clean_inst = re.sub(r"[^a-zA-Z0-9\s]", "", validated_instruction).lower()
     snake_inst = "_".join(clean_inst.split())[:30]
-    screenshot_name = f"{domain}_{snake_inst}_{timestamp}.png"
-    screenshot_path = str(SCREENSHOT_DIR / screenshot_name)
 
-    # --- Capture screenshot ---
     timeline += "🟢 **Screenshot Capturing**: Navigating page and rendering view...\n\n"
     yield timeline, None, ""
 
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(viewport={"width": 1280, "height": 720})
-            page = context.new_page()
-            page.goto(validated_url, timeout=30000, wait_until="domcontentloaded")
-            time.sleep(2)
-            page.screenshot(path=screenshot_path)
-            browser.close()
+        screenshot_path = capture_screenshot(
+            validated_url,
+            SCREENSHOT_DIR,
+            tag=snake_inst,
+            wait_ms=2000,
+        )
     except Exception as exc:
         yield (
             timeline + f"🔴 **Browser Capture Error**: {exc}",

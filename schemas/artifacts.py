@@ -1,9 +1,9 @@
 """
 Pydantic schemas for context snapshots and artifact records.
 
-Stub for Phase 6 (Context Collection Modernization). Defines ContextSnapshot
-so the generation and healing pipelines can type-annotate their context inputs
-now, even before the full context collector is built.
+Phase 6 (Context Collection Modernization): ContextSnapshot is now fully
+implemented via ``src.context.collect_context()``.  The schema itself is
+unchanged from the Phase 1 stub — all fields were already defined correctly.
 """
 
 from datetime import datetime
@@ -37,3 +37,8 @@ class ContextSnapshot(BaseModel):
     @property
     def has_a11y_tree(self) -> bool:
         return bool(self.accessibility_tree)
+
+    @property
+    def is_empty(self) -> bool:
+        """True when neither HTML nor accessibility tree was collected."""
+        return not self.html and not self.accessibility_tree

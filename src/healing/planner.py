@@ -69,6 +69,41 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
                 "```",
             ]
         )
+    if evidence.accessibility_tree:
+        user_prompt_lines.extend(
+            [
+                "",
+                "ACCESSIBILITY TREE (use roles/names for locators):",
+                evidence.accessibility_tree[:5000],
+            ]
+        )
+    if evidence.locator_candidates:
+        cand_lines = "\n".join(f"  - {c}" for c in evidence.locator_candidates[:20])
+        user_prompt_lines.extend(
+            [
+                "",
+                "AVAILABLE LOCATORS (from accessibility tree, prefer these):",
+                cand_lines,
+            ]
+        )
+    if evidence.console_errors:
+        err_lines = "\n".join(evidence.console_errors[:5])
+        user_prompt_lines.extend(
+            [
+                "",
+                "BROWSER CONSOLE ERRORS:",
+                err_lines,
+            ]
+        )
+    if evidence.network_errors:
+        net_lines = "\n".join(evidence.network_errors[:5])
+        user_prompt_lines.extend(
+            [
+                "",
+                "FAILED NETWORK REQUESTS:",
+                net_lines,
+            ]
+        )
     user_prompt = "\n".join(user_prompt_lines)
 
     router = get_default_router()

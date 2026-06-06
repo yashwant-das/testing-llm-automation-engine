@@ -15,7 +15,7 @@ from datetime import datetime
 
 from schemas.generation import GenerationResult
 from src.llm import get_default_router
-from src.utils.browser import extract_domain, fetch_page_context
+from src.utils.browser import extract_domain
 from src.utils.formatting import format_test_result
 from src.utils.llm import _extract_code_block
 from src.utils.prompt_loader import load_prompt
@@ -41,9 +41,29 @@ def generate_test_script(url: str, feature_description: str) -> str:
     try:
         logger.info("Generating test for URL: %s", url)
 
-        html_context = fetch_page_context(url)
-        if "Error" in html_context:
-            return html_context
+        from src.context import collect_context
+
+        snapshot = collect_context(url, capture_html=True, capture_a11y=True)
+
+        if not snapshot.html and not snapshot.accessibility_tree:
+            return f"Error: Failed to fetch page context from {url}"
+
+        # Build a richer PAGE CONTEXT block from the snapshot
+        context_parts: list[str] = []
+        if snapshot.html:
+            context_parts.append(snapshot.html)
+        if snapshot.accessibility_tree:
+            context_parts.append(
+                f"ACCESSIBILITY TREE:\n{snapshot.accessibility_tree[:5000]}"
+            )
+        if snapshot.locator_candidates:
+            cands = "\n".join(f"  - {c}" for c in snapshot.locator_candidates)
+            context_parts.append(f"LOCATOR CANDIDATES (prefer these):\n{cands}")
+        if snapshot.console_errors:
+            errs = "\n".join(snapshot.console_errors[:5])
+            context_parts.append(f"CONSOLE ERRORS:\n{errs}")
+
+        html_context = "\n\n".join(context_parts)
 
         system_instruction = load_prompt("generator")
         user_prompt = f"""

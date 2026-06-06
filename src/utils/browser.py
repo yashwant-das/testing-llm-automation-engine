@@ -1,22 +1,24 @@
 """
 Browser automation utilities for page context extraction.
 
-This module provides functions for fetching and processing web page content
-using Playwright and BeautifulSoup.
+``fetch_page_context`` is deprecated as of Phase 6.
+Use ``src.context.collect_context`` instead.
+
+``extract_domain`` is retained (not deprecated) — it is used by vision_service
+and other modules that need a filename-safe domain string.
 """
 
-from bs4 import BeautifulSoup
-from playwright.sync_api import sync_playwright
+import warnings
 
 
-def extract_domain(url):
+def extract_domain(url: str) -> str:
     """Extract a clean domain name from a URL for use in filenames.
 
     Args:
-        url: URL string
+        url: URL string.
 
     Returns:
-        str: Clean domain name (e.g., "example" from "https://www.example.com")
+        Clean domain name (e.g. ``"example"`` from ``"https://www.example.com"``).
     """
     from urllib.parse import urlparse
 
@@ -28,57 +30,38 @@ def extract_domain(url):
         return "test"
 
 
-def fetch_page_context(url, max_chars=30000):
+def fetch_page_context(url: str, max_chars: int = 30000) -> str:
     """Fetch and clean HTML content from a web page.
 
-    Uses Playwright to load the page and BeautifulSoup to remove unnecessary
-    elements (scripts, styles, SVGs) to reduce token usage for LLM processing.
+    .. deprecated:: Phase 6
+        Use :func:`src.context.collect_context` instead.  This shim delegates
+        to ``collect_context`` and will be removed in Phase 7.
 
     Args:
-        url: Validated URL string
-        max_chars: Maximum characters to return (default: 30000)
+        url:      Validated URL string.
+        max_chars: Maximum characters to return (default: 30000).
 
     Returns:
-        str: Cleaned HTML body as string, or error message if fetch fails
+        Cleaned HTML body as a string, or an error message if fetch fails.
     """
-    print(f"Visiting {url}...")
+    warnings.warn(
+        "fetch_page_context() is deprecated; use src.context.collect_context() instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context(
-                user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            )
-            page = context.new_page()
+        from src.context import collect_context
 
-            try:
-                page.goto(url, timeout=30000, wait_until="domcontentloaded")
-            except Exception as e:
-                browser.close()
-                return f"Error: Failed to load page - {str(e)}"
-
-            try:
-                content = page.content()
-            except Exception as e:
-                browser.close()
-                return f"Error: Failed to get page content - {str(e)}"
-
-            browser.close()
-
-            try:
-                soup = BeautifulSoup(content, "html.parser")
-                # Remove junk to save tokens
-                for script in soup(
-                    ["script", "style", "svg", "path", "meta", "link", "noscript"]
-                ):
-                    script.decompose()
-
-                if soup.body:
-                    clean_text = soup.body.prettify()[:max_chars]
-                    return clean_text
-                else:
-                    return "Error: Empty page body found."
-            except Exception as e:
-                return f"Error: Failed to parse HTML - {str(e)}"
-
-    except Exception as e:
-        return f"Error scanning page: {str(e)}"
+        snapshot = collect_context(
+            url,
+            capture_html=True,
+            capture_a11y=False,
+            capture_console=False,
+            capture_network=False,
+            max_html_chars=max_chars,
+        )
+        if not snapshot.html:
+            return f"Error: Failed to fetch page context from {url}"
+        return snapshot.html
+    except Exception as exc:
+        return f"Error scanning page: {exc}"

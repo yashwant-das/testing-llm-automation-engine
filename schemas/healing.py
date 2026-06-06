@@ -17,6 +17,7 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from .artifacts import ContextSnapshot
 from .shared import FailureType
 
 
@@ -76,6 +77,40 @@ class Evidence(BaseModel):
     error_log: str
     screenshot_path: Optional[str] = None
     dom_snippet: Optional[str] = None
+    # Phase 6: extended context from context collector
+    console_errors: List[str] = Field(default_factory=list)
+    network_errors: List[str] = Field(default_factory=list)
+    accessibility_tree: Optional[str] = None
+    locator_candidates: List[str] = Field(default_factory=list)
+
+    @classmethod
+    def from_context_snapshot(
+        cls,
+        error_log: str,
+        snapshot: ContextSnapshot,
+        *,
+        screenshot_path: Optional[str] = None,
+    ) -> "Evidence":
+        """Create Evidence from a ContextSnapshot plus error logs.
+
+        Args:
+            error_log:       Raw error output from the failing test run.
+            snapshot:        ContextSnapshot collected from the target URL.
+            screenshot_path: Path to a Playwright failure screenshot.  Takes
+                             precedence over any screenshot in the snapshot.
+
+        Returns:
+            Evidence populated with all available context fields.
+        """
+        return cls(
+            error_log=error_log,
+            screenshot_path=screenshot_path or snapshot.screenshot_path,
+            dom_snippet=snapshot.html,
+            console_errors=list(snapshot.console_errors),
+            network_errors=list(snapshot.network_errors),
+            accessibility_tree=snapshot.accessibility_tree,
+            locator_candidates=list(snapshot.locator_candidates),
+        )
 
 
 class HealingAnalysis(BaseModel):
