@@ -396,6 +396,198 @@ Remove or deprioritize:
 
 ---
 
+## Phase 11 — Documentation Modernization Sprint
+
+**Priority:** Medium. Implementation work through Phase 9 is substantially complete; the codebase now needs documentation that matches its maturity.
+
+### Problem
+
+The existing documentation was written incrementally during implementation. It is fragmented, inconsistently detailed, and does not give a new engineer a coherent mental model of the system. A senior engineer joining the project cannot understand the architecture, evaluate the design decisions, or contribute without reading source code.
+
+### Audience
+
+- Senior QA Engineers
+- SDETs
+- AI Engineers
+- LLM Application Developers
+- Researchers studying AI Systems Engineering
+
+### Documentation Principles
+
+Documentation must:
+
+- Describe reality, not aspirations
+- Match the current implementation exactly
+- Be technically accurate
+- Be beginner-friendly where possible
+- Explain engineering decisions and tradeoffs
+- Explain why choices were made, not just what they are
+
+Avoid:
+
+- Marketing language or buzzwords
+- Unsupported claims
+- Future roadmap items presented as implemented
+
+### Sub-Phases
+
+#### D1 — Repository Documentation Audit
+
+Full audit of all existing documentation before any rewrites.
+
+**Deliverable:** `docs/documentation-audit.md`
+
+For every document identify: outdated content, missing content, incorrect content, redundant content, and recommended changes.
+
+Documents to audit: `README.md`, `docs/architecture-review.md`, `docs/modernization-plan.md`, `docs/progress.md`, `docs/decisions.md`, `docs/technical-debt.md`, `docs/scorecard.md`, benchmark documentation, prompt documentation.
+
+#### D2 — Rewrite README
+
+The README becomes the primary entry point for all audiences.
+
+**Deliverable:** `README.md` (complete rewrite)
+
+Sections:
+
+- Project Overview — what the project is
+- Why It Exists — problem statement
+- Core Capabilities — Test Generation, Test Healing, Structured Outputs, Evaluation Framework, AST-Based Repair, Explainability, Observability, Local LLM Support
+- Architecture Overview — high-level diagram
+- Quick Start — installation
+- Running Locally — common workflows
+- Evaluation System — how benchmarks work
+- Repository Structure — important directories
+- Technology Choices — why each major technology was selected
+- Roadmap — current maturity and future plans
+
+#### D3 — Architecture Documentation
+
+One document per major subsystem. Every document must include: Purpose, Inputs, Outputs, Sequence Diagram, Data Flow, Design Decisions, Tradeoffs.
+
+**Deliverables:**
+
+```text
+docs/architecture/
+├── overview.md            # System-level architecture, component map
+├── generation.md          # Context collection → prompt → LLM → validation → .spec.ts
+├── healing.md             # Failure → classify → plan → repair → verify → artifact
+├── evaluation.md          # Dataset → benchmark → model → scoring → report
+├── llm-layer.md           # Router, client factory, registry, retry/fallback policies
+├── observability.md       # Tracer, thread-local sessions, JSONL spans, querying
+└── context-collection.md  # Browser session, a11y tree, DOM, console, network, locators
+```
+
+#### D4 — AI Systems Engineering Guide
+
+This project as a reference implementation for AI Systems Engineering concepts.
+
+**Deliverable:** `docs/ai-systems-engineering.md`
+
+Topics: Structured Outputs, Model Routing, Evaluation Frameworks, Deterministic vs AI Repair, Explainability, Observability, Reproducibility. The goal is that a reader learns AI Systems Engineering patterns by studying this project.
+
+#### D5 — Evaluation Documentation
+
+**Deliverables:**
+
+```text
+docs/evaluation/
+├── datasets.md            # Dataset format, mutation engine, fixture schema
+├── benchmarks.md          # Benchmark methodology, runner design, metric definitions
+├── scoring.md             # Scoring criteria, pass/fail logic, aggregate metrics
+├── reproducibility.md     # Temperature 0, seed, prompt hash, dataset version
+└── model-comparison.md    # How to run and compare models across benchmark runs
+```
+
+#### D6 — Prompt Documentation
+
+**Deliverables:**
+
+```text
+docs/prompts/
+├── overview.md            # Prompt management strategy, manifest.json, versioning
+├── generation.md          # Generator prompt: inputs, outputs, format contract
+├── healing.md             # Healer prompt: inputs, outputs, repair strategy guide
+├── intent-validation.md   # Intent validation prompt (if applicable)
+└── versioning.md          # How to version prompts, when to increment, hash vs version
+```
+
+#### D7 — Developer Documentation
+
+A new contributor should be able to run the project, add a model, add a benchmark, add a repair strategy, and debug failures without reading source code.
+
+**Deliverables:**
+
+```text
+docs/development/
+├── setup.md               # Prerequisites, installation, environment variables
+├── testing.md             # Running unit tests, test patterns, mocking LLM/browser
+├── debugging.md           # Common failure modes, trace inspection, log reading
+├── adding-models.md       # How to add a new LLM provider or model to the registry
+├── adding-benchmarks.md   # How to create a benchmark dataset and runner
+└── adding-healing-strategies.md  # How to add a new RepairStrategy and AST handler
+```
+
+#### D8 — Architecture Decision Records Review
+
+Review all existing ADRs in `docs/decisions.md` for accuracy. Ensure every major decision is documented. Create ADRs where missing.
+
+**ADRs to verify or create:**
+
+- LiteLLM adoption (or rejection — see ADR-002/007)
+- Pydantic adoption for structured outputs
+- AST strategy selection (ts-morph — see ADR-003)
+- Evaluation framework design (pure functions, no live LLM)
+- Observability approach (custom JSONL vs OpenTelemetry vs Langfuse)
+- Context collection architecture (single browser session)
+- Thread-local session isolation for Gradio
+
+#### D9 — Visual Documentation
+
+Mermaid diagrams for all major flows, embedded in the relevant architecture documents.
+
+**Diagrams required:**
+
+- System Architecture: `UI → Services → Pipelines → LLM Layer → Evaluation → Artifacts`
+- Generation Flow: `Context Collection → Prompt Assembly → Structured Output → Validation → Test Generation`
+- Healing Flow: `Failure → Classification → Planning → Repair → Verification → Artifact`
+- Evaluation Flow: `Dataset → Benchmark → Model → Scoring → Report`
+- Observability Flow: `Session Start → LLM Span → Subprocess Span → Session End → JSONL`
+
+#### D10 — Documentation Quality Review
+
+Final verification pass before closing the sprint.
+
+**Verify:**
+
+- All code examples are syntactically correct
+- All CLI commands work against the actual project
+- All file paths exist in the repository
+- All architecture diagrams match the implementation
+- All cross-references between documents are valid
+
+**Remove:**
+
+- Outdated documentation that no longer reflects the implementation
+- Duplicate content across documents
+- Contradictory claims between documents
+
+### Success Criteria
+
+A new engineer can answer the following without reading implementation code:
+
+- What is this project and why was it built?
+- How does test generation work end-to-end?
+- How does self-healing work end-to-end?
+- How are models evaluated?
+- How does observability work?
+- How do I add a new model?
+- How do I add a new benchmark?
+- How do I contribute a bug fix or new feature?
+
+### Estimated Effort: 5–8 days
+
+---
+
 ## Milestone Summary
 
 | Phase | Name | Priority | Effort | Depends On |
@@ -410,8 +602,9 @@ Remove or deprioritize:
 | 8 | Observability | MEDIUM | 3–4d | Phase 2 |
 | 9 | Explainability | MEDIUM | 1–2d | Phases 1, 8 |
 | 10 | UI Reposition | LOW | 4–6d | Phases 3–9 |
+| 11 | Documentation Modernization | MEDIUM | 5–8d | Phases 1–10 |
 
-**Total estimated effort:** 31–50 days of focused engineering work.
+**Total estimated effort:** 36–58 days of focused engineering work.
 
 ---
 
