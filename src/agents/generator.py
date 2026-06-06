@@ -14,9 +14,10 @@ import sys
 from datetime import datetime
 
 from schemas.generation import GenerationResult
+from src.llm import get_default_router
 from src.utils.browser import extract_domain, fetch_page_context
 from src.utils.formatting import format_test_result
-from src.utils.llm import _extract_code_block, get_client, get_model
+from src.utils.llm import _extract_code_block
 from src.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
@@ -51,10 +52,9 @@ USER STORY: {feature_description}
 PAGE CONTEXT: {html_context}
 """
 
-        llm_client = get_client()
+        router = get_default_router()
         try:
-            response = llm_client.chat.completions.create(
-                model=get_model(),
+            llm_response = router.complete_primary(
                 messages=[
                     {"role": "system", "content": system_instruction},
                     {"role": "user", "content": user_prompt},
@@ -62,10 +62,10 @@ PAGE CONTEXT: {html_context}
                 temperature=0.1,
             )
 
-            if not response.choices or not response.choices[0].message.content:
+            if not llm_response.content:
                 return "Error: LLM returned empty response"
 
-            raw_content = response.choices[0].message.content
+            raw_content = llm_response.content
             extracted = _extract_code_block(raw_content)
 
             # Validate via GenerationResult — raises ValueError if code is empty

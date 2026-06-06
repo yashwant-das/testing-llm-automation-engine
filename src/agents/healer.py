@@ -20,8 +20,9 @@ from schemas.healing import (
     HealingDecision,
 )
 from schemas.shared import FailureType, RunResult
+from src.llm import get_default_router
 from src.utils.browser import fetch_page_context
-from src.utils.llm import get_client, get_model, parse_llm_response
+from src.utils.llm import parse_llm_response
 from src.utils.prompt_loader import load_prompt
 from src.utils.validation import validate_file_path
 
@@ -212,10 +213,9 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
         )
     user_prompt = "\n".join(user_prompt_lines)
 
-    llm_client = get_client()
+    router = get_default_router()
     try:
-        response = llm_client.chat.completions.create(
-            model=get_model(),
+        llm_response = router.complete_primary(
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt},
@@ -223,7 +223,7 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
             temperature=0.1,
         )
 
-        raw_content = response.choices[0].message.content
+        raw_content = llm_response.content
 
         # --- Phase 1 core change: Pydantic validation replaces json.loads ---
         analysis = parse_llm_response(raw_content, HealingAnalysis)

@@ -36,28 +36,9 @@ Replace all `@dataclass` models with Pydantic `BaseModel` subclasses, housed in 
 ## ADR-002: LiteLLM for provider routing
 
 **Date:** 2026-06-06
-**Status:** PROPOSED (to be confirmed in Phase 2)
+**Status:** SUPERSEDED by ADR-007
 
-### Context
-
-The current LLM layer wraps `openai.OpenAI` with manual `base_url` switching. Supporting multiple providers (Ollama, LM Studio, future cloud models) requires branching logic and no fallback.
-
-### Decision (Proposed)
-
-Introduce LiteLLM as the routing layer. All LLM calls flow through `litellm.completion()` with provider-specific prefixes (`ollama/model`, `openai/model`, `lm_studio/model`).
-
-### Alternatives Considered
-
-- **Continue with OpenAI SDK + manual switching:** Works for current two providers but doesn't scale; no retry/fallback; requires code changes per new provider.
-- **LangChain:** Over-engineered for this scope; large dependency; opinionated abstractions that conflict with the simplicity goal.
-- **Direct HTTP (httpx):** Maximum control but requires reimplementing retry, streaming, and provider protocol differences.
-- **LiteLLM:** Thin abstraction, provider-prefix routing, built-in retry, cost tracking, 100+ providers. Matches project goals.
-
-### Consequences
-
-- **Positive:** Single `litellm.completion()` API; retry and fallback configured declaratively; token usage included in response.
-- **Negative:** Additional dependency; LiteLLM version stability requires monitoring; some provider-specific features may not surface.
-- **Decision Point:** If LiteLLM adds >50ms latency overhead on local Ollama calls, fall back to direct OpenAI SDK with a thin wrapper that adds retry.
+See ADR-007 for the implemented decision.
 
 ---
 
@@ -174,3 +155,61 @@ Introduce `src/services/` as the boundary between UI and agents. The UI imports 
 - **Positive:** `app.py` shrinks dramatically; agents testable independently; streaming logic centralized in services.
 - **Negative:** One additional layer of indirection.
 - **Implementation Note:** Services use Python generator functions (yield) to provide streaming progress events to Gradio.
+
+---
+
+## ADR-007: OpenAI SDK wrapper instead of LiteLLM
+
+**Date:** 2026-06-06
+**Status:** DECIDED (supersedes ADR-002)
+
+### Context
+
+ADR-002 proposed LiteLLM as the routing layer. Phase 2 was the implementation point.
+The project uses exactly two providers: LM Studio and Ollama. Both expose an
+OpenAI-compatible REST API at a configurable `base_url`.
+
+### Decision
+
+Implement the LLM layer as a thin wrapper around the existing `openai` SDK
+(`src/llm/` package) rather than adding LiteLLM.
+
+### Rationale
+
+- **LiteLLM's value is provider abstraction.** It normalises APIs from OpenAI, Anthropic,
+  Cohere, Bedrock, etc. This project uses only OpenAI-compatible local endpoints.
+  LiteLLM's abstraction adds nothing that `openai.OpenAI(base_url=...)` doesn't already do.
+- **Dependency weight.** LiteLLM is a large package (40 MB+) with its own transitive
+  dependency tree (httpx, aiohttp, pydantic, anthropic, …). Adding it violates the
+  "prefer deletion over addition" principle.
+- **Retry and fallback are simple.** The retry loop is ~30 lines. Fallback is a second
+  `OpenAI` client. This does not justify a 40 MB dependency.
+- **Testability.** The custom `LLMRouter` is easily unit-tested by mocking
+  `LLMClientFactory.create`. LiteLLM's global state makes mocking harder.
+
+### What was built instead
+
+```text
+src/llm/
+├── client.py     — ProviderConfig (Pydantic) + LLMClientFactory (static, no side effects)
+├── registry.py   — ModelCapabilities + ModelRegistry (capability metadata)
+├── policies.py   — RetryPolicy + TimeoutPolicy (Pydantic config models)
+├── router.py     — LLMRequest + LLMResponse (Pydantic) + LLMRouter (retry + fallback)
+└── __init__.py   — public API + get_default_router() lazy singleton
+```
+
+### Alternatives Considered
+
+- **LiteLLM:** Appropriate if the project ever needs to route to Anthropic, Bedrock, or
+  other non-OpenAI-compatible providers. Should be revisited if that requirement arises.
+- **Direct httpx:** Maximum control, but reimplements streaming and error handling already
+  covered by the OpenAI SDK.
+- **LangChain:** Over-engineered for this scope.
+
+### Consequences
+
+- **Positive:** No new dependencies; full control over retry/fallback/logging;
+  all router logic unit-tested without mocking a third-party library.
+- **Negative:** If a non-OpenAI-compatible provider is needed in the future,
+  the router will need a new client backend. LiteLLM remains the right choice for that case.
+- **Revisit trigger:** A third provider with a non-OpenAI-compatible API.

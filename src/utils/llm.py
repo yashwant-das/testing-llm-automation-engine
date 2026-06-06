@@ -2,15 +2,21 @@
 LLM client utilities for OpenAI-compatible API interactions.
 
 Public API:
-  get_client()              — returns the configured OpenAI client
-  get_model(vision=False)   — returns the model name for the current provider
+  get_client()              — deprecated shim; returns a client via LLMClientFactory
+  get_model(vision=False)   — deprecated shim; returns model via LLMRouter
   parse_llm_response()      — parse and validate an LLM response with Pydantic
   extract_code_block()      — legacy code extractor (used by app.py, deprecated)
   extract_json_block()      — legacy JSON extractor (kept for unit tests)
+
+Note: get_client() and get_model() are deprecated and will be removed in Phase 3
+when app.py is replaced with the service layer. All new code should import
+from src.llm directly:
+
+    from src.llm import get_default_router
+    response = get_default_router().complete_primary(messages=[...])
 """
 
 import logging
-import os
 import re
 from typing import Type, TypeVar
 
@@ -22,61 +28,36 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# ---------------------------------------------------------------------------
-# Provider configuration
-# ---------------------------------------------------------------------------
-
-LM_STUDIO_URL = os.getenv("LM_STUDIO_URL", "http://localhost:1234/v1")
-LM_STUDIO_API_KEY = os.getenv("LM_STUDIO_API_KEY", "lm-studio")
-
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/v1")
-OLLAMA_API_KEY = "ollama"
-
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "lm_studio").lower()
-
-LM_STUDIO_MODEL = os.getenv("LM_STUDIO_MODEL", "qwen/qwen3-coder-30b")
-LM_STUDIO_VISION_MODEL = os.getenv("LM_STUDIO_VISION_MODEL", "qwen/qwen3-vl-30b")
-
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "gemma4:26b")
-OLLAMA_VISION_MODEL = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:30b")
 
 # ---------------------------------------------------------------------------
-# Client initialisation (module-level singleton — Phase 2 will replace this
-# with LLMClientFactory; kept here to avoid breaking existing callers)
+# Deprecated shims — delegate to src.llm (Phase 3 will remove these)
 # ---------------------------------------------------------------------------
-
-try:
-    if LLM_PROVIDER == "ollama":
-        _base_url = OLLAMA_URL
-        _api_key = OLLAMA_API_KEY
-        logger.info("Initializing OpenAI client with Ollama provider at %s", _base_url)
-    else:
-        _base_url = LM_STUDIO_URL
-        _api_key = LM_STUDIO_API_KEY
-        logger.info(
-            "Initializing OpenAI client with LM Studio provider at %s", _base_url
-        )
-
-    client = OpenAI(base_url=_base_url, api_key=_api_key)
-except Exception as e:
-    logger.warning("Failed to initialize OpenAI client: %s", e)
-    client = None
 
 
 def get_client() -> OpenAI:
-    """Return the configured OpenAI-compatible client instance."""
-    return client
+    """Return a configured OpenAI-compatible client.
+
+    Deprecated: use src.llm.get_default_router() instead.
+    Kept for backward compatibility with app.py (removed in Phase 3).
+    """
+    from src.llm.client import LLMClientFactory
+
+    return LLMClientFactory.from_env()
 
 
 def get_model(vision: bool = False) -> str:
     """Return the appropriate model name for the current provider.
 
+    Deprecated: use src.llm.get_default_router().primary_model or .vision_model instead.
+    Kept for backward compatibility with app.py (removed in Phase 3).
+
     Args:
         vision: If True, return the vision-capable model.
     """
-    if LLM_PROVIDER == "ollama":
-        return OLLAMA_VISION_MODEL if vision else OLLAMA_MODEL
-    return LM_STUDIO_VISION_MODEL if vision else LM_STUDIO_MODEL
+    from src.llm import get_default_router
+
+    router = get_default_router()
+    return router.vision_model if vision else router.primary_model
 
 
 # ---------------------------------------------------------------------------

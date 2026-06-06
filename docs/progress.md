@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 1 — Structured Outputs Foundation (COMPLETE)
-**Next Phase:** Phase 2 — LLM Layer Modernization
+**Phase:** Phase 2 — LLM Layer Modernization (COMPLETE)
+**Next Phase:** Phase 3 — Architecture Cleanup (Service Layer)
 **Blockers:** None
 
 ---
@@ -76,6 +76,31 @@ All LLM response parsing migrated to Pydantic. Dead code deleted. 69/69 tests pa
 
 ---
 
+### 2026-06-06 — Phase 2: LLM Layer Modernization ✅
+
+Module-level `OpenAI()` singleton eliminated. All LLM calls route through `LLMRouter`. 129/129 tests passing.
+
+**Files created:**
+
+- `src/llm/__init__.py` — public API; `get_default_router()` lazy singleton
+- `src/llm/client.py` — `ProviderConfig`, `LLMClientFactory` (no module-level side effects)
+- `src/llm/registry.py` — `ModelCapabilities`, `ModelRegistry`
+- `src/llm/policies.py` — `RetryPolicy`, `TimeoutPolicy`
+- `src/llm/router.py` — `LLMRequest`, `LLMResponse`, `LLMRouter`
+- `tests/unit_test_llm.py` — 60 new tests (zero live LLM calls)
+
+**Files updated:**
+
+- `src/utils/llm.py` — module-level `OpenAI()` block deleted; `get_client()` / `get_model()` are now deprecated shims that delegate to `LLMClientFactory` / `LLMRouter`
+- `src/agents/healer.py` — `get_client()` / `get_model()` replaced with `get_default_router().complete_primary()`
+- `src/agents/generator.py` — same migration
+- `src/agents/vision.py` — `get_client()` / `get_model(vision=True)` replaced with `get_default_router().complete_vision()`
+- `docs/decisions.md` — ADR-002 superseded by ADR-007 (no LiteLLM)
+
+**Debt resolved:** TD-008 (module-level LLM singleton)
+
+---
+
 ## Current Work
 
 ---
@@ -84,9 +109,9 @@ All LLM response parsing migrated to Pydantic. Dead code deleted. 69/69 tests pa
 
 | Phase | Description | Status |
 | --- | --- | --- |
-| Phase 1 | Structured Outputs Foundation | NEXT |
-| Phase 2 | LLM Layer Modernization | PENDING |
-| Phase 3 | Architecture Cleanup (Service Layer) | PENDING |
+| Phase 1 | Structured Outputs Foundation | COMPLETE |
+| Phase 2 | LLM Layer Modernization | COMPLETE |
+| Phase 3 | Architecture Cleanup (Service Layer) | NEXT |
 | Phase 4 | Healer Decomposition | PENDING |
 | Phase 5 | AST-Based Repair | PENDING |
 | Phase 6 | Context Collection | PENDING |
