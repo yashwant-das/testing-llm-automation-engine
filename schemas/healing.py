@@ -127,7 +127,9 @@ class HealingAnalysis(BaseModel):
         "failure_summary": "Short description of failure",
         "hypothesis": "Why the fix will work",
         "confidence_score": 0.95,
+        "confidence_rationale": "Why this confidence level was chosen",
         "reasoning_steps": ["step 1", "step 2"],
+        "root_cause_evidence": ["evidence item 1", "evidence item 2"],
         "action_taken": {
             "original_code": "exact contiguous block to replace",
             "fixed_code": "replacement block",
@@ -141,7 +143,16 @@ class HealingAnalysis(BaseModel):
     failure_summary: str
     hypothesis: str
     confidence_score: float = Field(ge=0.0, le=1.0)
+    # Phase 9: explainability fields (optional — older prompts may not produce them)
+    confidence_rationale: str = Field(
+        default="",
+        description="The LLM's explanation of why this confidence level was assigned.",
+    )
     reasoning_steps: List[str]
+    root_cause_evidence: List[str] = Field(
+        default_factory=list,
+        description="Specific evidence items from logs / DOM that support the diagnosis.",
+    )
     action_taken: HealingAction
 
     model_config = ConfigDict(use_enum_values=False)
@@ -166,7 +177,8 @@ class HealingDecision(BaseModel):
     Full artifact record of a single healing attempt.
 
     Written to tests/artifacts/ as JSON after every healing session.
-    Carries all provenance: test file, evidence, LLM analysis, verification.
+    Carries all provenance: test file, evidence, LLM analysis, verification,
+    and (Phase 9) full explainability metadata.
     """
 
     test_file: str
@@ -181,6 +193,38 @@ class HealingDecision(BaseModel):
     verification_log: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
 
+    # Phase 9: Explainability fields — all default to empty / 0 so that
+    # existing artifact JSON files remain valid without migration.
+    model_used: str = Field(
+        default="",
+        description="Model identifier that produced this decision (e.g. 'qwen3-coder-30b').",
+    )
+    prompt_version: str = Field(
+        default="",
+        description="Human-set version label from prompts/manifest.json (e.g. '2').",
+    )
+    prompt_hash: str = Field(
+        default="",
+        description="SHA-256 hex prefix of the healer prompt content at run time.",
+    )
+    confidence_rationale: str = Field(
+        default="",
+        description="LLM's explanation of why this confidence level was assigned.",
+    )
+    root_cause_evidence: List[str] = Field(
+        default_factory=list,
+        description="Specific evidence items from logs/DOM that support the diagnosis.",
+    )
+    execution_duration_ms: int = Field(
+        default=0,
+        ge=0,
+        description="Wall-clock time for the full analyze_and_plan() call in milliseconds.",
+    )
+    context_snapshot_id: str = Field(
+        default="",
+        description="Short hash identifying the evidence error_log used for this decision.",
+    )
+
     model_config = ConfigDict(use_enum_values=False)
 
     @classmethod
@@ -190,8 +234,24 @@ class HealingDecision(BaseModel):
         test_file: str,
         analysis: HealingAnalysis,
         evidence: Evidence,
+        model_used: str = "",
+        prompt_version: str = "",
+        prompt_hash: str = "",
+        execution_duration_ms: int = 0,
+        context_snapshot_id: str = "",
     ) -> "HealingDecision":
-        """Construct a HealingDecision from a validated HealingAnalysis + evidence."""
+        """Construct a HealingDecision from a validated HealingAnalysis + evidence.
+
+        Args:
+            test_file:            Path to the failing test file.
+            analysis:             Validated :class:`HealingAnalysis` from the LLM.
+            evidence:             Evidence collected from the failure run.
+            model_used:           Model identifier from :class:`~src.llm.router.LLMResponse`.
+            prompt_version:       Version string from ``prompts/manifest.json``.
+            prompt_hash:          SHA-256 hex prefix of the healer prompt.
+            execution_duration_ms: Wall-clock time for the full planning call.
+            context_snapshot_id:  Short hash of the evidence error_log.
+        """
         return cls(
             test_file=test_file,
             failure_type=analysis.failure_type,
@@ -199,8 +259,15 @@ class HealingDecision(BaseModel):
             evidence=evidence,
             hypothesis=analysis.hypothesis,
             confidence_score=analysis.confidence_score,
+            confidence_rationale=analysis.confidence_rationale,
             reasoning_steps=analysis.reasoning_steps,
+            root_cause_evidence=analysis.root_cause_evidence,
             action_taken=analysis.action_taken,
+            model_used=model_used,
+            prompt_version=prompt_version,
+            prompt_hash=prompt_hash,
+            execution_duration_ms=execution_duration_ms,
+            context_snapshot_id=context_snapshot_id,
         )
 
     def to_dict(self) -> dict:
@@ -212,7 +279,11 @@ class HealingDecision(BaseModel):
         return self.model_dump_json(indent=2)
 
     def to_markdown(self) -> str:
-        """Generate a human-readable markdown healing report."""
+        """Generate a human-readable markdown healing report.
+
+        Phase 9: extended with Provenance and Root Cause Evidence sections so
+        the artifact is self-explaining without needing to open the raw JSON.
+        """
         emoji = "✅" if self.verification_passed else "❌"
         fail_type_str = (
             self.failure_type.value
@@ -225,26 +296,64 @@ class HealingDecision(BaseModel):
             if self.evidence.screenshot_path
             else "*(no screenshot)*"
         )
+
+        # Provenance block (Phase 9)
+        model_str = self.model_used or "*(unknown)*"
+        prompt_str = (
+            f"`{self.prompt_version}` (hash: `{self.prompt_hash}`)"
+            if self.prompt_version or self.prompt_hash
+            else "*(unknown)*"
+        )
+        duration_str = (
+            f"{self.execution_duration_ms} ms"
+            if self.execution_duration_ms
+            else "*(not recorded)*"
+        )
+        snapshot_str = (
+            f"`{self.context_snapshot_id}`" if self.context_snapshot_id else "*(n/a)*"
+        )
+
+        # Root cause evidence block (Phase 9)
+        if self.root_cause_evidence:
+            rce_md = "\n".join(f"- {item}" for item in self.root_cause_evidence)
+        else:
+            rce_md = "*(none provided)*"
+
+        # Confidence rationale (Phase 9)
+        rationale_md = self.confidence_rationale or "*(not provided)*"
+
         return f"""# Healing Report: {self.timestamp}
+
 **File:** `{self.test_file}`
 **Status:** {emoji} {"Fixed" if self.verification_passed else "Failed"}
 
 ## Diagnosis
+
 - **Type:** `{fail_type_str}`
 - **Summary:** {self.failure_summary}
 
 ## Evidence
+
 - **Error:** `{self.evidence.error_log[:200]}...`
 - **Screenshot:** {screenshot_md}
 
+## Root Cause Evidence
+
+{rce_md}
+
 ## Resolution
+
 **Hypothesis:** {self.hypothesis}
 **Confidence:** {self.confidence_score}
 
+**Confidence Rationale:** {rationale_md}
+
 **Reasoning:**
+
 {steps_md}
 
 ## Code Change
+
 ```typescript
 // OLD
 {self.action_taken.original_code}
@@ -252,6 +361,13 @@ class HealingDecision(BaseModel):
 // NEW
 {self.action_taken.fixed_code}
 ```
+
+## Provenance
+
+- **Model:** {model_str}
+- **Prompt Version:** {prompt_str}
+- **Execution Time:** {duration_str}
+- **Context Snapshot:** {snapshot_str}
 """
 
 

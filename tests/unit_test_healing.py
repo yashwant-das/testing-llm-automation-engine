@@ -299,7 +299,8 @@ class TestAnalyzeAndPlan(unittest.TestCase):
     def _mock_router(self, response_json: str) -> MagicMock:
         mock_router = MagicMock()
         mock_router.complete_primary.return_value = MagicMock(
-            content=f"```json\n{response_json}\n```"
+            content=f"```json\n{response_json}\n```",
+            model_used="mock-model",  # Phase 9: planner passes this to HealingDecision
         )
         return mock_router
 

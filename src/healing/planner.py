@@ -17,16 +17,28 @@ The planner:
      healing loop always gets a valid object.
 """
 
+import hashlib
 import logging
+import time
 
 from schemas.healing import Evidence, HealingAction, HealingAnalysis, HealingDecision
 from schemas.shared import FailureType
 from src.healing.classifier import classify_failure_heuristic
 from src.llm import get_default_router
 from src.utils.llm import parse_llm_response
-from src.utils.prompt_loader import load_prompt
+from src.utils.prompt_loader import get_prompt_hash, get_prompt_version, load_prompt
 
 logger = logging.getLogger(__name__)
+
+
+def _evidence_snapshot_id(evidence: Evidence) -> str:
+    """Return a short stable ID for the evidence error_log.
+
+    Used as ``context_snapshot_id`` so healing decisions can be cross-referenced
+    even when no formal snapshot was stored.  First 12 hex chars of SHA-256.
+    """
+    content = evidence.error_log or ""
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()[:12]
 
 
 def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecision:
@@ -42,7 +54,12 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
         HealingDecision with a validated diagnosis and proposed code fix.
         Falls back to a zero-confidence decision if the LLM call or parsing fails.
     """
+    t0 = time.monotonic()
     h_type, h_conf, h_reason = classify_failure_heuristic(evidence.error_log)
+
+    _prompt_version = get_prompt_version("healer")
+    _prompt_hash = get_prompt_hash("healer")
+    _snapshot_id = _evidence_snapshot_id(evidence)
 
     system_prompt = load_prompt("healer").format(
         failure_type=h_type.value, confidence=h_conf, reason=h_reason
@@ -125,14 +142,21 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
         if h_conf > 0.8 and analysis.failure_type == FailureType.UNKNOWN:
             analysis = analysis.model_copy(update={"failure_type": h_type})
 
+        duration_ms = int((time.monotonic() - t0) * 1000)
         return HealingDecision.from_analysis(
             test_file=str(test_file),
             analysis=analysis,
             evidence=evidence,
+            model_used=llm_response.model_used,
+            prompt_version=_prompt_version,
+            prompt_hash=_prompt_hash,
+            execution_duration_ms=duration_ms,
+            context_snapshot_id=_snapshot_id,
         )
 
     except Exception as exc:
         logger.error("LLM analysis error: %s", exc)
+        duration_ms = int((time.monotonic() - t0) * 1000)
         return HealingDecision(
             test_file=str(test_file),
             failure_type=FailureType.UNKNOWN,
@@ -144,4 +168,8 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
             action_taken=HealingAction(
                 original_code="", fixed_code="", description="No action"
             ),
+            prompt_version=_prompt_version,
+            prompt_hash=_prompt_hash,
+            execution_duration_ms=duration_ms,
+            context_snapshot_id=_snapshot_id,
         )

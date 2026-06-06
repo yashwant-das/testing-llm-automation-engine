@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 8 — Observability (COMPLETE)
-**Next Phase:** Phase 9 — Explainability
+**Phase:** Phase 9 — Explainability (COMPLETE)
+**Next Phase:** Phase 10 — UI Reposition
 **Blockers:** None
 
 ---
@@ -387,6 +387,62 @@ jq 'select(.span_type == "subprocess") | {command, latency_ms}' logs/traces.json
 
 ---
 
+---
+
+### 2026-06-06 — Phase 9: Explainability ✅
+
+Every `HealingDecision` artifact now carries full provenance: which model produced
+it, which prompt version and content hash were active, how long the planning took,
+a stable fingerprint of the evidence log, plus the LLM's own rationale for its
+confidence score and the specific evidence items it relied on.
+440 tests passing (393 prior + 47 new).
+
+**Files created:**
+
+- `prompts/manifest.json` — human-set version registry for all prompts;
+  healer starts at version `"2"` (reflects the repair-strategy addition in Phase 5)
+- `tests/unit_test_explainability.py` — 47 new tests covering new schema fields,
+  `from_analysis()` propagation, `to_markdown()` provenance rendering,
+  `get_prompt_version()` manifest reading, `_evidence_snapshot_id()` hash stability,
+  and backward-compat round-trips for old artifact JSON
+
+**Files updated:**
+
+- `schemas/healing.py` — `HealingAnalysis` extended with `confidence_rationale` and
+  `root_cause_evidence` (both optional with safe defaults so old prompt responses
+  still parse); `HealingDecision` extended with 7 provenance fields:
+  `model_used`, `prompt_version`, `prompt_hash`, `confidence_rationale`,
+  `root_cause_evidence`, `execution_duration_ms`, `context_snapshot_id`;
+  `from_analysis()` accepts all new fields as kwargs; `to_markdown()` extended with
+  **Root Cause Evidence** and **Provenance** sections
+- `src/healing/planner.py` — `analyze_and_plan()` now times itself end-to-end,
+  captures `get_prompt_version("healer")` and `get_prompt_hash("healer")` before the
+  LLM call, generates `_evidence_snapshot_id(evidence)` as a 12-char SHA-256 prefix,
+  and passes all provenance fields into `HealingDecision.from_analysis()`; the fallback
+  path (LLM error) also populates provenance fields
+- `src/utils/prompt_loader.py` — `get_prompt_version(agent_name) -> str` added;
+  `_load_manifest()` reads and caches `prompts/manifest.json`
+- `prompts/healer.md` — `confidence_rationale` and `root_cause_evidence` fields added
+  to the required JSON output schema so future LLM responses include them
+- `tests/unit_test_healing.py` — `_mock_router()` updated to set `model_used="mock-model"`
+  on the mock `LLMResponse` so Phase 9 planner changes don't break existing tests
+
+**Design decisions:**
+
+- **All 7 new `HealingDecision` fields default to empty/0** — existing artifact JSON
+  files written before Phase 9 remain valid without any migration
+- **`context_snapshot_id`** is a 12-char SHA-256 hex prefix of the raw `error_log`;
+  deterministic, collision-resistant enough for cross-referencing, and requires no
+  storage system
+- **`confidence_rationale` and `root_cause_evidence`** flow from `HealingAnalysis`
+  (LLM output contract) → `HealingDecision` (artifact record) → `to_markdown()`
+  (human report) — one data path, no duplication
+- **`prompt_version` is human-set in `manifest.json`**; `prompt_hash` is always
+  computed dynamically from file content — the two together detect both intentional
+  and accidental prompt changes
+
+---
+
 ## Upcoming Work
 
 | Phase | Description | Status |
@@ -399,8 +455,8 @@ jq 'select(.span_type == "subprocess") | {command, latency_ms}' logs/traces.json
 | Phase 6 | Context Collection | COMPLETE |
 | Phase 7 | Evaluation Framework | COMPLETE |
 | Phase 8 | Observability | COMPLETE |
-| Phase 9 | Explainability | NEXT |
-| Phase 10 | UI Reposition | PENDING |
+| Phase 9 | Explainability | COMPLETE |
+| Phase 10 | UI Reposition | NEXT |
 
 ---
 

@@ -21,7 +21,9 @@ You MUST return a valid JSON object matching this schema:
     "failure_summary": "Short description of failure",
     "hypothesis": "Why the fix will work",
     "confidence_score": 0.95,
+    "confidence_rationale": "One sentence explaining why this confidence level was chosen (e.g. 'The locator exactly matches the error log pattern with no ambiguity')",
     "reasoning_steps": ["step 1", "step 2"],
+    "root_cause_evidence": ["specific log line or DOM element that proves the diagnosis", "..."],
     "action_taken": {{
         "original_code": "EXACT contiguous block of code to be replaced. MUST MATCH FILE EXACTLY including whitespace. Do NOT skip lines between edits.",
         "fixed_code":  "New contiguous block of code to insert.",
