@@ -7,8 +7,8 @@
 
 ## Current Status
 
-**Phase:** Phase 0 — Repository Audit (COMPLETE)
-**Next Phase:** Phase 1 — Structured Outputs Foundation
+**Phase:** Phase 1 — Structured Outputs Foundation (COMPLETE)
+**Next Phase:** Phase 2 — LLM Layer Modernization
 **Blockers:** None
 
 ---
@@ -48,19 +48,35 @@ Full audit of all source files, tests, prompts, and documentation.
 - `docs/technical-debt.md` — full debt register
 - `docs/scorecard.md` — baseline maturity scores
 
+### 2026-06-06 — Phase 1: Structured Outputs Foundation ✅
+
+All LLM response parsing migrated to Pydantic. Dead code deleted. 69/69 tests passing.
+
+**Files created:**
+
+- `schemas/__init__.py`, `shared.py`, `healing.py`, `generation.py`, `evaluation.py`, `artifacts.py`
+- `tests/unit_test_schemas.py` — 41 new tests
+
+**Files updated:**
+
+- `src/utils/llm.py` — added `parse_llm_response()`; `extract_json/code_block` moved to internal `_` helpers
+- `src/agents/healer.py` — `extract_json_block` + `json.loads` replaced with `parse_llm_response(HealingAnalysis)`; `TestRunResult` replaced with `RunResult`
+- `src/agents/generator.py` — internal `GenerationResult` validation on LLM code extraction
+- `src/agents/vision.py` — internal `GenerationResult` validation on LLM code extraction
+- `src/models/healing_model.py` — converted to re-export shim from `schemas/`
+- `tests/unit_test_fixer.py` — updated to expect `ValidationError` for invalid enum values (correct Pydantic behavior)
+- `tests/unit_test_validation.py` — removed `sanitize_for_shell` tests (dead code deleted)
+- `pyproject.toml` — `pydantic>=2.0.0` added as explicit dependency
+
+**Deleted:**
+
+- `sanitize_for_shell()` from `src/utils/validation.py` — dead code (TD-013 resolved)
+
+**Debt resolved:** TD-002 (fragile parsing), TD-006 (dataclasses), TD-013 (dead code), TD-015 (TestRunResult mock)
+
 ---
 
 ## Current Work
-
-### Starting Phase 1: Structured Outputs Foundation
-
-Planned tasks:
-
-1. Create `schemas/` directory with Pydantic models
-2. Replace `src/models/healing_model.py` dataclasses with Pydantic `BaseModel`
-3. Replace `extract_json_block()` + `json.loads()` with Pydantic `.model_validate()`
-4. Add schema tests
-5. Update healer to use validated schemas
 
 ---
 

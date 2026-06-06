@@ -1,116 +1,109 @@
 """
 Vision-based test generation agent using screenshot analysis.
 
-This module captures UI screenshots and uses vision-capable LLMs to generate
-Playwright test scripts based on visual analysis.
+Captures a UI screenshot and uses a vision-capable LLM to generate a
+Playwright test script based on visual analysis.  The LLM response is
+validated through GenerationResult before returning.
 """
 
 import base64
 import logging
 import os
+import re
 import sys
 import time
 from datetime import datetime
 
 from playwright.sync_api import sync_playwright
 
+from schemas.generation import GenerationResult
 from src.utils.browser import extract_domain
-from src.utils.llm import extract_code_block, get_client, get_model
+from src.utils.llm import _extract_code_block, get_client, get_model
 from src.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
-# Add the project root to sys.path to support 'src.' imports when run as a script
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 SCREENSHOT_DIR = "tests/screenshots"
 os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
 
-def encode_image(image_path):
-    """Encode an image file to base64 for LLM vision API.
+def encode_image(image_path: str) -> str:
+    """Encode an image file to base64 for the vision LLM API.
 
     Args:
-        image_path: Path to the image file
+        image_path: Path to the PNG/JPEG screenshot file.
 
     Returns:
-        str: Base64 encoded string
+        Base64-encoded string of the image bytes.
 
     Raises:
-        FileNotFoundError: If image file doesn't exist
-        IOError: If file cannot be read
+        FileNotFoundError: If the image file does not exist.
+        IOError: If the file cannot be read.
     """
     if not os.path.exists(image_path):
         raise FileNotFoundError(f"Screenshot not found: {image_path}")
-
     try:
         with open(image_path, "rb") as image_file:
             return base64.b64encode(image_file.read()).decode("utf-8")
-    except IOError as e:
-        raise IOError(f"Error reading screenshot: {str(e)}")
+    except IOError as exc:
+        raise IOError(f"Error reading screenshot: {exc}") from exc
 
 
-def analyze_visual_ui(url, instruction):
-    """Analyze a UI using vision-capable LLM and generate a test script.
+def analyze_visual_ui(url: str, instruction: str) -> str:
+    """Analyze a UI with a vision LLM and return a generated test script.
 
-    Captures a screenshot of the target URL and uses vision LLM to analyze
-    the UI and generate appropriate Playwright test code.
+    Captures a screenshot of the target URL, calls the vision model, then
+    validates the extracted code through GenerationResult.
 
     Args:
-        url: Validated URL string
-        instruction: Validated instruction string describing the action to perform
+        url: Validated URL string.
+        instruction: Validated instruction describing the action to perform.
 
     Returns:
-        str: Generated TypeScript test code, or error message if generation fails
+        Generated TypeScript test code, or an error message string.
     """
-    import re
-
     try:
         domain = extract_domain(url)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Meaningful snake_case sanitization
         clean_inst = re.sub(r"[^a-zA-Z0-9\s]", "", instruction).lower()
         snake_inst = "_".join(clean_inst.split())[:30]
-
         screenshot_name = f"{domain}_{snake_inst}_{timestamp}.png"
         screenshot_path = os.path.join(SCREENSHOT_DIR, screenshot_name)
 
-        # Ensure screenshot directory exists
-        if not os.path.exists(SCREENSHOT_DIR):
-            os.makedirs(SCREENSHOT_DIR, exist_ok=True)
+        os.makedirs(SCREENSHOT_DIR, exist_ok=True)
 
-        # 1. Capture screenshot of the target URL
-        logger.info(f"Capturing screenshot for {url}...")
+        # Capture screenshot
+        logger.info("Capturing screenshot for %s...", url)
         try:
             with sync_playwright() as p:
                 browser = p.chromium.launch(headless=True)
                 context = browser.new_context(viewport={"width": 1280, "height": 720})
                 page = context.new_page()
                 page.goto(url, timeout=30000, wait_until="domcontentloaded")
-                time.sleep(2)  # Wait for animations
+                time.sleep(2)
                 page.screenshot(path=screenshot_path)
                 browser.close()
-        except Exception as e:
-            return f"Error capturing screenshot: {str(e)}"
+        except Exception as exc:
+            return f"Error capturing screenshot: {exc}"
 
         if not os.path.exists(screenshot_path):
             return f"Error: Screenshot was not created at {screenshot_path}"
 
-        # 2. Encode screenshot for vision LLM
+        # Encode screenshot for vision API
         try:
             base64_image = encode_image(screenshot_path)
-        except (FileNotFoundError, IOError) as e:
-            return f"Error encoding image: {str(e)}"
+        except (FileNotFoundError, IOError) as exc:
+            return f"Error encoding image: {exc}"
 
-        # 3. Load vision system instruction from prompts/vision.md
         system_instruction = load_prompt("vision")
 
-        # 4. Call Vision LLM
-        logger.info("Analyzing UI with Vision model...")
-        client = get_client()
+        logger.info("Analyzing UI with vision model...")
+        llm_client = get_client()
         try:
-            response = client.chat.completions.create(
+            response = llm_client.chat.completions.create(
                 model=get_model(vision=True),
                 messages=[
                     {"role": "system", "content": system_instruction},
@@ -137,14 +130,19 @@ def analyze_visual_ui(url, instruction):
             if not response.choices or not response.choices[0].message.content:
                 return "Error: Vision LLM returned empty response"
 
-            # 5. Extract code block
-            code = extract_code_block(response.choices[0].message.content)
-            if not code:
-                return "Error: Could not extract code block from vision LLM response"
+            raw_content = response.choices[0].message.content
+            extracted = _extract_code_block(raw_content)
 
-            return code
-        except Exception as e:
-            return f"Vision LLM Error: {str(e)}"
+            # Validate via GenerationResult
+            try:
+                result = GenerationResult(code=extracted)
+            except ValueError as exc:
+                return f"Error: Could not extract valid code from vision LLM response: {exc}"
 
-    except Exception as e:
-        return f"Error analyzing visual UI: {str(e)}"
+            return result.code
+
+        except Exception as exc:
+            return f"Vision LLM Error: {exc}"
+
+    except Exception as exc:
+        return f"Error analyzing visual UI: {exc}"

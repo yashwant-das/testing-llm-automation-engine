@@ -1,9 +1,7 @@
 """
 Self-healing agent for automatically repairing broken Playwright tests.
-Refactored for Phase 1: Explainable Healing.
 """
 
-import json
 import logging
 import re
 import subprocess
@@ -14,19 +12,19 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-from src.models.healing_model import (
+from schemas.healing import (
     Evidence,
     ExecutionTimeline,
-    FailureType,
     HealingAction,
+    HealingAnalysis,
     HealingDecision,
 )
+from schemas.shared import FailureType, RunResult
 from src.utils.browser import fetch_page_context
-from src.utils.llm import extract_json_block, get_client, get_model
+from src.utils.llm import get_client, get_model, parse_llm_response
 from src.utils.prompt_loader import load_prompt
 from src.utils.validation import validate_file_path
 
-# Resolve project root more robustly
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 sys.path.append(str(PROJECT_ROOT))
 
@@ -34,18 +32,9 @@ ARTIFACTS_DIR = PROJECT_ROOT / "tests" / "artifacts"
 ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
-class TestRunResult:
-    """Mock class to match CompletedProcess for healer fallback results."""
-
-    def __init__(self, returncode: int, stdout: str, stderr: str):
-        self.returncode = returncode
-        self.stdout = stdout
-        self.stderr = stderr
-
-
-def run_test(test_file):
-    """Run a Playwright test file and return execution result."""
-    logger.info(f"Running {test_file}...")
+def run_test(test_file) -> RunResult:
+    """Run a Playwright test file and return a structured RunResult."""
+    logger.info("Running %s...", test_file)
     try:
         result = subprocess.run(
             ["npx", "playwright", "test", str(test_file)],
@@ -54,29 +43,21 @@ def run_test(test_file):
             timeout=60,
             cwd=str(PROJECT_ROOT),
         )
-        return result
+        return RunResult(
+            returncode=result.returncode,
+            stdout=result.stdout or "",
+            stderr=result.stderr or "",
+        )
     except subprocess.TimeoutExpired:
-        return TestRunResult(
-            returncode=1,
-            stdout="",
-            stderr="Test execution timed out after 60 seconds",
-        )
+        return RunResult.from_timeout()
     except FileNotFoundError:
-        return TestRunResult(
-            returncode=1,
-            stdout="",
-            stderr="Playwright not found",
-        )
+        return RunResult.from_error("Playwright not found")
 
 
 def extract_url_from_code(code: str) -> Optional[str]:
-    """Extract target URL from Playwright test code.
-
-    Finds page.goto(...) calls in the code.
-    """
+    """Extract the target URL from a page.goto() call in Playwright test code."""
     if not code:
         return None
-    # Matches await page.goto('...') or page.goto("...") or page.goto(`...`)
     pattern = r"page\.goto\(['\"`](https?://[^\s'\"`]+)['\"`]\)"
     match = re.search(pattern, code)
     if match:
@@ -84,54 +65,50 @@ def extract_url_from_code(code: str) -> Optional[str]:
     return None
 
 
-def gather_evidence(test_file, result):
-    """Collect evidence from the failed test run, including screenshots and DOM if available."""
+def gather_evidence(test_file, result: RunResult) -> Evidence:
+    """Collect evidence from a failed test run: logs, screenshot, DOM snippet."""
     logs = result.stderr if result.stderr else result.stdout
 
-    # Try to find the most recent screenshot in test-results
+    # Look for the most recent screenshot in test-results/
     screenshot_path = None
     results_dir = PROJECT_ROOT / "test-results"
-
     if results_dir.exists():
-        # Look for the most recent .png file
         screenshots = list(results_dir.glob("**/*.png"))
         if screenshots:
-            # Sort by modification time to get the latest
-            latest_screenshot = max(screenshots, key=lambda p: p.stat().st_mtime)
-            screenshot_path = str(latest_screenshot)
+            screenshot_path = str(max(screenshots, key=lambda p: p.stat().st_mtime))
 
-    # Extract URL from test file to fetch DOM snippet
+    # Fetch live DOM from the target URL found in the test file
     dom_snippet = None
     try:
         test_file_path = Path(test_file)
         if test_file_path.exists():
-            with open(test_file_path, "r", encoding="utf-8") as f:
-                code = f.read()
+            code = test_file_path.read_text(encoding="utf-8")
             url = extract_url_from_code(code)
             if url:
-                logger.info(f"Extracting DOM context from target URL: {url}...")
+                logger.info("Fetching DOM context from %s...", url)
                 dom_snippet = fetch_page_context(url)
                 if dom_snippet and dom_snippet.startswith("Error"):
-                    logger.warning(f"Failed to fetch DOM context: {dom_snippet}")
+                    logger.warning("Failed to fetch DOM context: %s", dom_snippet)
                     dom_snippet = None
-    except Exception as e:
-        logger.warning(f"Error gathering DOM context evidence: {e}")
+    except Exception as exc:
+        logger.warning("Error gathering DOM context evidence: %s", exc)
 
     return Evidence(
-        error_log=logs, screenshot_path=screenshot_path, dom_snippet=dom_snippet
+        error_log=logs,
+        screenshot_path=screenshot_path,
+        dom_snippet=dom_snippet,
     )
 
 
 def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
-    """
-    Determininstically classify failure based on regex patterns.
-    Returns: (FailureType, Confidence, Reasoning)
-    """
+    """Deterministically classify failure from log patterns.
 
+    Returns:
+        (FailureType, confidence, reasoning)
+    """
     if not logs:
         return (FailureType.UNKNOWN, 0.0, "No logs available")
 
-    # 1. Timeout / Waiting
     if (
         "TimeoutError" in logs
         or "waiting for selector" in logs
@@ -144,7 +121,6 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             "Detected 'TimeoutError', 'waiting for selector', or 'waiting for locator' in logs",
         )
 
-    # 2. Target Closed / Environment
     if "TargetClosedError" in logs or "browser has been closed" in logs:
         return (
             FailureType.ENVIRONMENT_ISSUE,
@@ -152,8 +128,6 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             "Detected 'TargetClosedError' or browser crash",
         )
 
-    # 3. Assertion Failures
-    # Look for "expect(received).toBe(expected)" pattern
     if "expect(" in logs and "received" in logs:
         return (
             FailureType.ASSERTION_FAILED,
@@ -161,8 +135,6 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             "Detected 'expect(...)' assertion failure",
         )
 
-    # 4. Locator Issues
-    # If Playwright helps us by listing available elements, it's likely a drift
     if "Error: strict mode violation" in logs:
         return (
             FailureType.LOCATOR_DRIFT,
@@ -170,9 +142,7 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             "Strict mode violation: multiple elements match selector",
         )
 
-    # If it says "locator resolved to 0 elements", it might be missing or drifted
     if "locator resolved to 0 elements" in logs:
-        # If we see suggestions like "Did you mean..." it's a drift
         if "Did you mean" in logs:
             return (
                 FailureType.LOCATOR_DRIFT,
@@ -181,7 +151,6 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             )
         return (FailureType.LOCATOR_NOT_FOUND, 0.7, "Locator resolved to 0 elements")
 
-    # 5. Page Crashes / 404 / 500
     if "net::ERR_ABORTED" in logs or "404" in logs or "500" in logs:
         return (
             FailureType.POTENTIAL_APP_DEFECT,
@@ -189,36 +158,34 @@ def classify_failure_heuristic(logs: str) -> tuple[FailureType, float, str]:
             "Detected network error or HTTP failure status code",
         )
 
-    # 6. JavaScript Errors
     if "ReferenceError" in logs or "TypeError" in logs:
-        # Check if it's likely an app error or a test error
-        # (Heuristic: if it mentions a selector, maybe it's the test)
         return (
             FailureType.JAVASCRIPT_ERROR,
             0.7,
             "Detected JavaScript runtime error in logs",
         )
 
-    return (FailureType.UNKNOWN, 0.0, "No specific regex pattern matched")
+    return (FailureType.UNKNOWN, 0.0, "No specific pattern matched")
 
 
-def analyze_and_plan(test_file, code, evidence: Evidence) -> HealingDecision:
-    """Analyze the test failure using heuristics and LLM, then propose a fix.
+def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecision:
+    """Analyze a test failure with heuristics + LLM and produce a HealingDecision.
+
+    The healer prompt receives the heuristic pre-diagnosis so the LLM can
+    confirm or correct it.  The LLM response is validated with Pydantic
+    (HealingAnalysis) before any field is accessed — no silent data corruption.
 
     Args:
-        test_file: Path to the failing test file
-        code: The source code of the failing test
-        evidence: Evidence collected from the failure run
+        test_file: Path to the failing test file.
+        code: Current source code of the failing test.
+        evidence: Evidence collected from the failure run.
 
     Returns:
-        HealingDecision: Structured description of the diagnosis and proposed fix
+        HealingDecision: Validated diagnosis and proposed fix.
     """
-
-    # Run Heuristics First
     h_type, h_conf, h_reason = classify_failure_heuristic(evidence.error_log)
 
-    system_prompt_template = load_prompt("healer")
-    system_prompt = system_prompt_template.format(
+    system_prompt = load_prompt("healer").format(
         failure_type=h_type.value, confidence=h_conf, reason=h_reason
     )
 
@@ -233,7 +200,6 @@ def analyze_and_plan(test_file, code, evidence: Evidence) -> HealingDecision:
         "ERROR LOGS:",
         evidence.error_log[:2000],
     ]
-
     if evidence.dom_snippet:
         user_prompt_lines.extend(
             [
@@ -244,12 +210,11 @@ def analyze_and_plan(test_file, code, evidence: Evidence) -> HealingDecision:
                 "```",
             ]
         )
-
     user_prompt = "\n".join(user_prompt_lines)
 
-    client = get_client()
+    llm_client = get_client()
     try:
-        response = client.chat.completions.create(
+        response = llm_client.chat.completions.create(
             model=get_model(),
             messages=[
                 {"role": "system", "content": system_prompt},
@@ -259,61 +224,51 @@ def analyze_and_plan(test_file, code, evidence: Evidence) -> HealingDecision:
         )
 
         raw_content = response.choices[0].message.content
-        json_content = extract_json_block(raw_content)
-        data = json.loads(json_content, strict=False)
 
-        # If heuristic confidence is high (>0.8), prefer heuristic type unless LLM overrides with strong reasoning
-        final_type = data.get("failure_type", FailureType.UNKNOWN)
-        if h_conf > 0.8 and final_type == FailureType.UNKNOWN:
-            final_type = h_type
+        # --- Phase 1 core change: Pydantic validation replaces json.loads ---
+        analysis = parse_llm_response(raw_content, HealingAnalysis)
 
-        # Prepare Action Data (Sanitize if LLM returns list of strings for code)
-        action_data = data.get("action_taken", {})
-        if isinstance(action_data.get("original_code"), list):
-            action_data["original_code"] = "\n".join(action_data["original_code"])
-        if isinstance(action_data.get("fixed_code"), list):
-            action_data["fixed_code"] = "\n".join(action_data["fixed_code"])
+        # Apply heuristic override: if heuristic is high-confidence and LLM
+        # returned UNKNOWN, trust the heuristic.
+        if h_conf > 0.8 and analysis.failure_type == FailureType.UNKNOWN:
+            analysis = analysis.model_copy(update={"failure_type": h_type})
 
-        return HealingDecision(
-            test_file=test_file,
-            failure_type=final_type,
-            failure_summary=data.get("failure_summary", "No summary provided"),
+        return HealingDecision.from_analysis(
+            test_file=str(test_file),
+            analysis=analysis,
             evidence=evidence,
-            hypothesis=data.get("hypothesis", "No hypothesis"),
-            confidence_score=data.get("confidence_score", 0.0),
-            reasoning_steps=data.get("reasoning_steps", []),
-            action_taken=HealingAction(**action_data),
         )
 
-    except Exception as e:
-        logger.error(f"LLM Analysis Error: {e}")
+    except Exception as exc:
+        logger.error("LLM analysis error: %s", exc)
         return HealingDecision(
-            test_file=test_file,
+            test_file=str(test_file),
             failure_type=FailureType.UNKNOWN,
-            failure_summary=f"Agent failed to analyze: {str(e)}",
+            failure_summary=f"Agent failed to analyze: {exc}",
             evidence=evidence,
-            hypothesis="Fallback: Manual intervention needed",
+            hypothesis="Fallback: manual intervention needed",
             confidence_score=0.0,
-            reasoning_steps=["LLM call failed"],
+            reasoning_steps=["LLM call or response parsing failed"],
             action_taken=HealingAction(
                 original_code="", fixed_code="", description="No action"
             ),
         )
 
 
-def apply_fix(file_path, current_code, decision: HealingDecision):
-    """Apply the proposed code fix to the source file using robust matching.
+def apply_fix(file_path, current_code: str, decision: HealingDecision) -> str:
+    """Apply the proposed code fix using exact match with normalized fallback.
 
-    Attempts exact matching first, then falls back to normalized line matching
-    to handle potential indentation or whitespace differences in LLM output.
+    Attempts exact string replacement first, then falls back to a
+    sliding-window normalized match that tolerates indentation differences
+    in LLM output.
 
     Args:
-        file_path: Path to the file to modify
-        current_code: Current content of the file
-        decision: The healing decision containing the fix to apply
+        file_path: Path to the file being modified (used only for logging).
+        current_code: Current file content.
+        decision: HealingDecision containing the original and fixed code.
 
     Returns:
-        str: The updated code content
+        Updated code string, or current_code unchanged if no match was found.
     """
     target = decision.action_taken.original_code
     replacement = decision.action_taken.fixed_code
@@ -321,8 +276,7 @@ def apply_fix(file_path, current_code, decision: HealingDecision):
     if not target or not replacement:
         return current_code
 
-    # 1. Try Exact Match
-    # Only do exact match if replacement is a single line, or if the target matches exactly and has the same leading indentation
+    # Strategy 1: exact match
     if target in current_code and (
         len(replacement.splitlines()) == 1
         or (
@@ -333,92 +287,69 @@ def apply_fix(file_path, current_code, decision: HealingDecision):
     ):
         return current_code.replace(target, replacement)
 
-    # 2. Try Normalized Match (Ignore leading/trailing whitespace per line)
-    # This helps if the LLM messes up indentation
-    def normalize_lines(text):
+    # Strategy 2: normalized line match (tolerates indentation drift)
+    def normalize_lines(text: str):
         return [line.strip() for line in text.splitlines() if line.strip()]
 
     target_lines = normalize_lines(target)
     code_lines = current_code.splitlines()
 
-    # Simple sliding window search
     for i in range(len(code_lines) - len(target_lines) + 1):
         window = [line.strip() for line in code_lines[i : i + len(target_lines)]]
-        # Check if window matches target lines (ignoring empty lines in code if needed)
-        # For strictness, we'll just compare stripped content
         if window == target_lines:
-            # Found it! Replace these lines
-            # Note: We replace the *original* lines from the file (preserving their indentation if possible?
-            # No, we'll likely use the indentation of the first line)
-
-            # Construct replacement
-            # Calculate indentation of the first matched line
-            first_line_idx = i
-            base_indent = code_lines[first_line_idx][
-                : len(code_lines[first_line_idx])
-                - len(code_lines[first_line_idx].lstrip())
+            # Infer base indentation from the first matched line
+            base_indent = code_lines[i][
+                : len(code_lines[i]) - len(code_lines[i].lstrip())
             ]
 
-            # Calculate the indentation of the first non-empty line of the replacement to use as reference
+            # Determine the base indentation of the replacement block
             replacement_lines = replacement.splitlines()
-            non_empty_replacement = [line for line in replacement_lines if line.strip()]
-            if non_empty_replacement:
-                first_rep = non_empty_replacement[0]
-                rep_base_indent_len = len(first_rep) - len(first_rep.lstrip())
-            else:
-                rep_base_indent_len = 0
+            non_empty = [line for line in replacement_lines if line.strip()]
+            rep_base = (
+                len(non_empty[0]) - len(non_empty[0].lstrip()) if non_empty else 0
+            )
 
-            # Indent the replacement lines while preserving relative indentation
-            indented_replacement = []
+            # Re-indent replacement to match the matched block's indentation
+            indented = []
             for r_line in replacement_lines:
                 if not r_line.strip():
-                    indented_replacement.append("")
+                    indented.append("")
                 else:
-                    current_indent_len = len(r_line) - len(r_line.lstrip())
-                    rel_indent_len = max(0, current_indent_len - rep_base_indent_len)
-                    indented_replacement.append(
-                        base_indent + (" " * rel_indent_len) + r_line.lstrip()
-                    )
+                    rel = max(0, (len(r_line) - len(r_line.lstrip())) - rep_base)
+                    indented.append(base_indent + (" " * rel) + r_line.lstrip())
 
-            new_code_lines = (
-                code_lines[:i]
-                + indented_replacement
-                + code_lines[i + len(target_lines) :]
-            )
-            return "\n".join(new_code_lines)
+            new_lines = code_lines[:i] + indented + code_lines[i + len(target_lines) :]
+            return "\n".join(new_lines)
 
     logger.warning(
-        f"Target code not found in file (even after normalization).\nTarget:\n{target}"
+        "Target code not found in file (exact or normalized).\nTarget:\n%s", target
     )
     return current_code
 
 
-def emit_artifacts(decision: HealingDecision, timeline: ExecutionTimeline):
-    """Write the healing decision and execution timeline to JSON files.
-
-    Args:
-        decision: The healing decision to save
-        timeline: The execution timeline to save
-    """
+def emit_artifacts(decision: HealingDecision, timeline: ExecutionTimeline) -> None:
+    """Write the healing decision and execution timeline to JSON artifact files."""
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-    # 1. Healing Decision
-    decision_filename = f"healing_decision_{timestamp}.json"
-    decision_path = ARTIFACTS_DIR / decision_filename
-    with open(decision_path, "w") as f:
-        f.write(decision.to_json())
+    decision_path = ARTIFACTS_DIR / f"healing_decision_{timestamp}.json"
+    decision_path.write_text(decision.to_json(), encoding="utf-8")
 
-    # 2. Timeline
-    timeline_filename = f"execution_timeline_{timestamp}.json"
-    timeline_path = ARTIFACTS_DIR / timeline_filename
-    with open(timeline_path, "w") as f:
-        f.write(timeline.to_json())
+    timeline_path = ARTIFACTS_DIR / f"execution_timeline_{timestamp}.json"
+    timeline_path.write_text(timeline.to_json(), encoding="utf-8")
 
-    logger.info(f"Artifacts saved:\n     {decision_path}\n     {timeline_path}")
+    logger.info("Artifacts saved:\n     %s\n     %s", decision_path, timeline_path)
 
 
-def attempt_healing(test_file, max_retries=3):
-    """Orchestrate the healing pipeline."""
+def attempt_healing(test_file, max_retries: int = 3) -> str:
+    """Orchestrate the full healing pipeline for a failing test file.
+
+    Args:
+        test_file: Path to the failing .spec.ts file.
+        max_retries: Maximum number of repair attempts.
+
+    Returns:
+        A summary string describing the outcome.
+    """
     timeline = ExecutionTimeline()
     timeline.add_step("Start", f"Healing session started for {test_file}")
 
@@ -429,16 +360,14 @@ def attempt_healing(test_file, max_retries=3):
         timeline.add_step("Error", msg)
         return msg
 
-    logger.info(f"--- Starting Healing Session: {test_file} ---")
+    logger.info("--- Starting Healing Session: %s ---", test_file)
 
-    # 1. Initial Run
+    # Initial run
     result = run_test(validated_path)
-    if result.returncode == 0:
+    if result.passed:
         timeline.add_step("InitialRun", "Test passed, no healing needed")
-
-        # Create a placeholder decision for the records
         success_decision = HealingDecision(
-            test_file=test_file,
+            test_file=str(test_file),
             failure_type=FailureType.UNKNOWN,
             failure_summary="Test passed initially",
             evidence=gather_evidence(validated_path, result),
@@ -459,34 +388,26 @@ def attempt_healing(test_file, max_retries=3):
         f"Initial test run failed with return code {result.returncode}",
     )
 
-    # Read code
-    with open(validated_path, "r") as f:
-        current_code = f.read()
+    current_code = validated_path.read_text(encoding="utf-8")
 
-    # 2. Loop
     for attempt in range(max_retries):
-        logger.info(f"Healing Attempt {attempt + 1}/{max_retries}")
+        logger.info("Healing Attempt %d/%d", attempt + 1, max_retries)
         timeline.add_step("HealingAttempt", f"Starting attempt {attempt + 1}")
 
-        # Gather Evidence
         evidence = gather_evidence(validated_path, result)
         timeline.add_step(
             "EvidenceCollected", "Logs and screenshot (if available) collected"
         )
 
-        # Reason & Plan
         decision = analyze_and_plan(validated_path, current_code, evidence)
-        logger.info(f"Diagnosis: {decision.failure_type}")
-        logger.info(f"Hypothesis: {decision.hypothesis}")
-
+        logger.info("Diagnosis: %s", decision.failure_type)
+        logger.info("Hypothesis: %s", decision.hypothesis)
         timeline.add_step(
             "AnalysisComplete",
             f"Diagnosed as {decision.failure_type}. Hypothesis: {decision.hypothesis}",
         )
 
-        # Act
         new_code = apply_fix(validated_path, current_code, decision)
-
         if new_code == current_code:
             decision.verification_log = "Could not apply fix (code mismatch)"
             timeline.add_step(
@@ -499,35 +420,24 @@ def attempt_healing(test_file, max_retries=3):
         timeline.add_step(
             "SelectorUpdated", f"Applied fix: {decision.action_taken.description}"
         )
+        validated_path.write_text(new_code, encoding="utf-8")
 
-        # Write new code
-        with open(validated_path, "w") as f:
-            f.write(new_code)
-
-        # Verify
         verify_result = run_test(validated_path)
-        decision.verification_passed = verify_result.returncode == 0
-        decision.verification_log = (
-            verify_result.stdout
-            if verify_result.returncode == 0
-            else verify_result.stderr
+        decision.verification_passed = verify_result.passed
+        decision.verification_log = verify_result.output
+
+        timeline.add_step(
+            "Verification",
+            "Test passed on re-run"
+            if decision.verification_passed
+            else "Test failed on re-run",
         )
-
-        if decision.verification_passed:
-            timeline.add_step("Verification", "Test passed on re-run")
-        else:
-            timeline.add_step("Verification", "Test failed on re-run")
-
-        # Report
         emit_artifacts(decision, timeline)
 
         if decision.verification_passed:
-            logger.info(
-                f"--- Healing Session Completed: SUCCESS! \nReasoning: {decision.hypothesis} ---"
-            )
-            return f"\nSUCCESS: Test healed! \nReasoning: {decision.hypothesis}"
+            logger.info("--- Healing Session Completed: SUCCESS ---")
+            return f"\nSUCCESS: Test healed!\nReasoning: {decision.hypothesis}"
 
-        # Prepare for next loop
         current_code = new_code
         result = verify_result
         timeline.add_step("Retry", "Preparing for next retry attempt")
@@ -536,7 +446,7 @@ def attempt_healing(test_file, max_retries=3):
         "HealingFailed", f"Exhausted {max_retries} attempts without success"
     )
     logger.info(
-        f"--- Healing Session Completed: Failed to heal after {max_retries} attempts ---"
+        "--- Healing Session Completed: Failed after %d attempts ---", max_retries
     )
     return "Healing failed to make test pass."
 
@@ -548,9 +458,7 @@ if __name__ == "__main__":
         description="Self-healing agent for automatically repairing broken Playwright tests."
     )
     parser.add_argument(
-        "test_file",
-        type=str,
-        help="Path to the broken Playwright test file.",
+        "test_file", type=str, help="Path to the broken Playwright test file."
     )
     parser.add_argument(
         "--max-retries",
@@ -559,5 +467,4 @@ if __name__ == "__main__":
         help="Maximum healing attempts (default: 3).",
     )
     args = parser.parse_args()
-
     print(attempt_healing(args.test_file, max_retries=args.max_retries))

@@ -4,7 +4,6 @@ Input validation utilities for the QA Agent.
 
 import os
 import re
-from typing import Optional
 from urllib.parse import urlparse
 
 
@@ -144,25 +143,3 @@ def validate_description(description: str, max_length: int = 500) -> str:
             )
 
     return description
-
-
-def sanitize_for_shell(text: Optional[str]) -> Optional[str]:
-    """Sanitize text for safe use in shell contexts.
-
-    Args:
-        text: The text to sanitize
-
-    Returns:
-        Optional[str]: Text with shell metacharacters escaped or removed, or None if input is None
-    """
-    if not text:
-        return text
-
-    # Escape backticks and other shell metacharacters
-    sanitized = text.replace("`", "\\`")
-    sanitized = sanitized.replace("$", "\\$")
-    sanitized = sanitized.replace(";", "\\;")
-    sanitized = sanitized.replace("&", "\\&")
-    sanitized = sanitized.replace("|", "\\|")
-
-    return sanitized

@@ -148,26 +148,33 @@ if (success) {
             reasoning_steps=[],
             action_taken=HealingAction(original_code="", fixed_code="", description=""),
         )
-        # Should coerce to FailureType enum
+        # Valid string should be coerced to the FailureType enum
         self.assertEqual(decision.failure_type, FailureType.LOCATOR_DRIFT)
         self.assertIsInstance(decision.failure_type, FailureType)
 
-        # Output to markdown should succeed
+        # to_markdown should render the enum value correctly
         md = decision.to_markdown()
         self.assertIn("LOCATOR_DRIFT", md)
 
-        # Should fallback gracefully to UNKNOWN for invalid values
-        decision_invalid = HealingDecision(
-            test_file="dummy.ts",
-            failure_type="INVALID_TYPE_BLAH",
-            failure_summary="Something failed",
-            evidence=Evidence(error_log=""),
-            hypothesis="",
-            confidence_score=1.0,
-            reasoning_steps=[],
-            action_taken=HealingAction(original_code="", fixed_code="", description=""),
-        )
-        self.assertEqual(decision_invalid.failure_type, FailureType.UNKNOWN)
+        # Phase 1 behaviour change: Pydantic raises ValidationError for unrecognised
+        # failure types instead of silently coercing to UNKNOWN.  Invalid LLM output
+        # is caught earlier by parse_llm_response(HealingAnalysis) before it reaches
+        # HealingDecision, so silent coercion is no longer needed or desirable.
+        from pydantic import ValidationError
+
+        with self.assertRaises(ValidationError):
+            HealingDecision(
+                test_file="dummy.ts",
+                failure_type="INVALID_TYPE_BLAH",
+                failure_summary="Something failed",
+                evidence=Evidence(error_log=""),
+                hypothesis="",
+                confidence_score=1.0,
+                reasoning_steps=[],
+                action_taken=HealingAction(
+                    original_code="", fixed_code="", description=""
+                ),
+            )
 
 
 if __name__ == "__main__":

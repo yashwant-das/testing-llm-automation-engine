@@ -2,7 +2,6 @@ import unittest
 
 from src.utils.validation import (
     ValidationError,
-    sanitize_for_shell,
     validate_description,
 )
 
@@ -73,46 +72,6 @@ class TestValidation(unittest.TestCase):
         with self.assertRaises(ValidationError) as context:
             validate_description(desc)
         self.assertIn("invalid characters", str(context.exception))
-
-    def test_sanitize_for_shell_backticks(self):
-        """Test that sanitize_for_shell escapes backticks."""
-        text = "Login with `standard_user`"
-        result = sanitize_for_shell(text)
-        self.assertEqual(result, "Login with \\`standard_user\\`")
-
-    def test_sanitize_for_shell_dollar(self):
-        """Test that sanitize_for_shell escapes dollar signs."""
-        text = "Use $HOME variable"
-        result = sanitize_for_shell(text)
-        self.assertEqual(result, "Use \\$HOME variable")
-
-    def test_sanitize_for_shell_semicolon(self):
-        """Test that sanitize_for_shell escapes semicolons."""
-        text = "Login; then logout"
-        result = sanitize_for_shell(text)
-        self.assertEqual(result, "Login\\; then logout")
-
-    def test_sanitize_for_shell_pipe(self):
-        """Test that sanitize_for_shell escapes pipes."""
-        text = "cmd1 | cmd2"
-        result = sanitize_for_shell(text)
-        self.assertEqual(result, "cmd1 \\| cmd2")
-
-    def test_sanitize_for_shell_ampersand(self):
-        """Test that sanitize_for_shell escapes ampersands."""
-        text = "cmd1 & cmd2"
-        result = sanitize_for_shell(text)
-        self.assertEqual(result, "cmd1 \\& cmd2")
-
-    def test_sanitize_for_shell_empty(self):
-        """Test that sanitize_for_shell handles empty input."""
-        result = sanitize_for_shell("")
-        self.assertEqual(result, "")
-
-    def test_sanitize_for_shell_none(self):
-        """Test that sanitize_for_shell handles None input."""
-        result = sanitize_for_shell(None)
-        self.assertIsNone(result)
 
 
 if __name__ == "__main__":

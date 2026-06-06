@@ -1,61 +1,59 @@
 """
 Test generation agent for creating Playwright test scripts.
 
-This module generates TypeScript Playwright tests from URLs and feature descriptions
-using LLM-based code generation.
+Generates TypeScript Playwright tests from a URL and feature description
+by fetching page context and calling an LLM.  The LLM response is validated
+through GenerationResult before any code is written to disk.
 """
 
 import logging
 import os
+import re
 import subprocess
 import sys
+from datetime import datetime
 
+from schemas.generation import GenerationResult
 from src.utils.browser import extract_domain, fetch_page_context
 from src.utils.formatting import format_test_result
-from src.utils.llm import extract_code_block, get_client, get_model
+from src.utils.llm import _extract_code_block, get_client, get_model
 from src.utils.prompt_loader import load_prompt
 
 logger = logging.getLogger(__name__)
 
-# Add the project root to sys.path to support 'src.' imports when run as a script
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 
 TEST_DIR = "tests/generated"
 os.makedirs(TEST_DIR, exist_ok=True)
 
 
-def generate_test_script(url, feature_description):
+def generate_test_script(url: str, feature_description: str) -> str:
     """Generate a Playwright test script from a URL and feature description.
 
     Args:
-        url: Validated URL string
-        feature_description: Validated feature description string
+        url: Validated URL string.
+        feature_description: Validated feature description string.
 
     Returns:
-        str: Generated TypeScript test code, or error message if generation fails
+        Generated TypeScript test code, or an error message string.
     """
     try:
-        logger.info(f"Generating test for URL: {url}")
-        # 1. Fetch page context (HTML)
-        html_context = fetch_page_context(url)
+        logger.info("Generating test for URL: %s", url)
 
+        html_context = fetch_page_context(url)
         if "Error" in html_context:
             return html_context
 
-        # 2. Load system instruction from prompts/generator.md
         system_instruction = load_prompt("generator")
-
-        # 3. Create user prompt with target URL and description
         user_prompt = f"""
-    TARGET URL: {url}
-    USER STORY: {feature_description}
-    PAGE CONTEXT: {html_context}
-    """
+TARGET URL: {url}
+USER STORY: {feature_description}
+PAGE CONTEXT: {html_context}
+"""
 
-        # 4. Call LLM to generate code
-        client = get_client()
+        llm_client = get_client()
         try:
-            response = client.chat.completions.create(
+            response = llm_client.chat.completions.create(
                 model=get_model(),
                 messages=[
                     {"role": "system", "content": system_instruction},
@@ -67,61 +65,58 @@ def generate_test_script(url, feature_description):
             if not response.choices or not response.choices[0].message.content:
                 return "Error: LLM returned empty response"
 
-            # 5. Extract code block from response
-            code = extract_code_block(response.choices[0].message.content)
-            if not code:
-                return "Error: Could not extract code block from LLM response"
+            raw_content = response.choices[0].message.content
+            extracted = _extract_code_block(raw_content)
 
-            return code
+            # Validate via GenerationResult — raises ValueError if code is empty
+            try:
+                result = GenerationResult(code=extracted)
+            except ValueError as exc:
+                return f"Error: Could not extract valid code from LLM response: {exc}"
 
-        except Exception as e:
-            return f"LLM Error: {str(e)}"
+            return result.code
 
-    except Exception as e:
-        return f"Error generating test script: {str(e)}"
+        except Exception as exc:
+            return f"LLM Error: {exc}"
+
+    except Exception as exc:
+        return f"Error generating test script: {exc}"
 
 
-def run_generated_test(url, code_snippet, description="test"):
+def run_generated_test(url: str, code_snippet: str, description: str = "test") -> str:
     """Run a generated test script using Playwright.
 
     Args:
-        url: Validated URL string
-        code_snippet: TypeScript test code to run
-        description: Test description for filename generation
+        url: Validated URL string.
+        code_snippet: TypeScript test code to run.
+        description: Test description used in the filename.
 
     Returns:
-        str: Test execution result message (pass/fail with logs)
+        Test execution result message (pass/fail with logs).
     """
     if not code_snippet or not code_snippet.strip():
         return "Error: No test code provided"
 
     try:
-        # Using the new naming convention: [domain]_[description]_[YYYYMMDD_HHMMSS].spec.ts
-        import re
-        from datetime import datetime
-
         domain = extract_domain(url)
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
-        # Meaningful snake_case sanitization (limited to alphanumeric and simple hyphens)
         clean_desc = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
-        # Remove consecutive underscores
         clean_desc = re.sub(r"_+", "_", clean_desc)
         snake_desc = clean_desc[:40].strip("_")
 
         filename = f"{domain}_{snake_desc}_{timestamp}.spec.ts"
         filepath = os.path.join(TEST_DIR, filename)
 
-        # Validate filepath before writing
-        if not os.path.exists(TEST_DIR):
-            os.makedirs(TEST_DIR, exist_ok=True)
-
+        os.makedirs(TEST_DIR, exist_ok=True)
         with open(filepath, "w", encoding="utf-8") as f:
             f.write(code_snippet)
 
-        logger.info(f"Running {filename}...")
+        logger.info("Running %s...", filename)
 
-        # Subprocess run uses a list, so shell quoting is handled automatically.
+        project_root = os.path.abspath(
+            os.path.join(os.path.dirname(__file__), "..", "..")
+        )
 
         try:
             result = subprocess.run(
@@ -129,24 +124,19 @@ def run_generated_test(url, code_snippet, description="test"):
                 capture_output=True,
                 text=True,
                 timeout=45,
-                cwd=os.path.dirname(
-                    os.path.dirname(os.path.dirname(__file__))
-                ),  # Project root
+                cwd=project_root,
             )
-
             if result.returncode == 0:
                 return format_test_result(filepath, result.stdout, success=True)
-            else:
-                # Check if stdout has more useful info than stderr in case of playwright failures
-                logs = result.stdout if result.stdout else result.stderr
-                return format_test_result(filepath, logs, success=False)
+            logs = result.stdout if result.stdout else result.stderr
+            return format_test_result(filepath, logs, success=False)
 
         except subprocess.TimeoutExpired:
             return f"Error: Test execution timed out after 45 seconds.\nStored in: {filepath}"
         except FileNotFoundError:
             return "Error: Playwright not found. Please run 'npx playwright install'"
-        except Exception as e:
-            return f"Execution Error: {str(e)}\nStored in: {filepath}"
+        except Exception as exc:
+            return f"Execution Error: {exc}\nStored in: {filepath}"
 
-    except Exception as e:
-        return f"Error running test: {str(e)}"
+    except Exception as exc:
+        return f"Error running test: {exc}"
