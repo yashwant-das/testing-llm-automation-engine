@@ -7,7 +7,10 @@ and benchmark results.  No AI calls are made from this module.
 Public API:
     list_artifacts()                -> list[str]     — file paths, newest-first
     load_artifact(path)             -> (str, dict)   — (markdown, raw dict)
-    run_classification_benchmark()  -> str           — markdown report
+    run_classification_benchmark()  -> str           — markdown report (saves to benchmarks/reports/)
+    load_benchmark_history()        -> str           — markdown delta table from saved reports
+    check_llm_available()           -> (bool, str)   — LLM reachability probe
+    run_generation_benchmark_ui()   -> str           — LLM-guarded generation benchmark
     load_traces()                   -> (str, str)    — (markdown body, summary label)
     get_model_info()                -> str           — markdown table of registered models
 """
@@ -27,6 +30,10 @@ _TRACES_PATH = PROJECT_ROOT / "logs" / "traces.jsonl"
 _DATASET_PATH = (
     PROJECT_ROOT / "benchmarks" / "healing" / "fixtures" / "repair_scenarios.json"
 )
+_GEN_DATASET_PATH = (
+    PROJECT_ROOT / "benchmarks" / "generation" / "fixtures" / "web_scenarios.json"
+)
+_REPORTS_DIR = PROJECT_ROOT / "benchmarks" / "reports"
 
 
 # ---------------------------------------------------------------------------
@@ -149,6 +156,14 @@ def run_classification_benchmark() -> str:
         logger.exception("Benchmark run failed: %s", exc)
         return f"**Benchmark run failed:** `{exc}`"
 
+    # Persist the report so history comparison works.
+    try:
+        report_path = run.save_report(_REPORTS_DIR)
+        logger.info("Benchmark report saved: %s", report_path)
+    except Exception as exc:
+        logger.warning("Could not save benchmark report: %s", exc)
+        report_path = None
+
     pass_icon = "✅" if run.passed == run.total else "⚠️"
     lines = [
         f"## {pass_icon} Heuristic Classification Benchmark",
@@ -183,9 +198,13 @@ def run_classification_benchmark() -> str:
                 reason = d.get("reason") or result.error or "—"
                 lines.append(f"- **`{result.example_id}`** — {reason}")
 
+    saved_note = (
+        f"`{report_path.name}`" if report_path else "*(report could not be saved)*"
+    )
     lines += [
         "",
-        f"*Run at {config.timestamp[:19]}. Dataset: `{_DATASET_PATH.name}`.*",
+        f"*Run at {config.timestamp[:19]}. Dataset: `{_DATASET_PATH.name}`."
+        f" Report: {saved_note}.*",
     ]
     return "\n".join(lines)
 
@@ -308,6 +327,212 @@ def load_traces() -> tuple[str, str]:
 
     lines.append(f"*Showing up to {_TRACE_DISPLAY_LIMIT} most recent spans per type.*")
     return "\n".join(lines), summary_label
+
+
+# ---------------------------------------------------------------------------
+# Benchmark history
+# ---------------------------------------------------------------------------
+
+_HISTORY_DISPLAY_LIMIT = 10  # max runs shown in the history table
+
+
+def load_benchmark_history() -> str:
+    """Load all saved benchmark reports and return a markdown comparison table.
+
+    Reads ``benchmarks/reports/*.json`` (all benchmark types), sorts them newest-first,
+    and shows a run-over-run delta on pass rate, mean score, and mean latency.
+
+    Returns:
+        Markdown string with a history table and delta column.
+    """
+    if not _REPORTS_DIR.exists():
+        return (
+            "## Benchmark History\n\n"
+            "*No reports saved yet. Run a benchmark to record the first baseline.*"
+        )
+
+    report_files = sorted(
+        _REPORTS_DIR.glob("*.json"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+
+    if not report_files:
+        return (
+            "## Benchmark History\n\n"
+            "*No reports found in `benchmarks/reports/`. "
+            "Run a benchmark to record the first baseline.*"
+        )
+
+    runs: list[tuple[str, float, float, float]] = []  # (label, pass_rate, score, lat)
+    for path in report_files[:_HISTORY_DISPLAY_LIMIT]:
+        try:
+            from schemas.evaluation import BenchmarkRun
+
+            run = BenchmarkRun.model_validate_json(path.read_text(encoding="utf-8"))
+            label = f"{run.config.benchmark_type} / {run.config.model}"
+            runs.append((label, run.pass_rate, run.mean_score, run.mean_duration_ms))
+        except Exception as exc:
+            logger.warning("Could not parse report %s: %s", path.name, exc)
+
+    if not runs:
+        return "## Benchmark History\n\n*All report files failed to parse.*"
+
+    lines = [
+        "## Benchmark History",
+        f"*{len(runs)} run(s) — newest first · up to {_HISTORY_DISPLAY_LIMIT} shown*",
+        "",
+        "| Run | Pass rate | Δ pass | Mean score | Δ score | Mean latency ms |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+
+    for i, (label, pr, sc, lat) in enumerate(runs):
+        if i + 1 < len(runs):
+            prev_pr, prev_sc = runs[i + 1][1], runs[i + 1][2]
+            delta_pr = pr - prev_pr
+            delta_sc = sc - prev_sc
+            delta_pr_str = f"{delta_pr:+.1%}"
+            delta_sc_str = f"{delta_sc:+.3f}"
+        else:
+            delta_pr_str = "*(baseline)*"
+            delta_sc_str = "*(baseline)*"
+
+        lines.append(
+            f"| {label} | {pr:.1%} | {delta_pr_str}"
+            f" | {sc:.3f} | {delta_sc_str} | {lat:.0f} |"
+        )
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# LLM availability check
+# ---------------------------------------------------------------------------
+
+
+def check_llm_available() -> tuple[bool, str]:
+    """Check whether the primary LLM is reachable.
+
+    Makes a minimal completion call (1 token) to the primary model.
+    Used to gate LLM-backed benchmarks so the UI shows a clear error
+    instead of a long timeout.
+
+    Returns:
+        ``(available, message)`` — if ``available`` is False, ``message``
+        describes why.
+    """
+    try:
+        from src.llm import get_default_router
+
+        router = get_default_router()
+        router.complete_primary(
+            messages=[{"role": "user", "content": "ping"}],
+            temperature=0.0,
+            max_tokens=1,
+        )
+        return True, "LLM reachable"
+    except Exception as exc:
+        return False, f"LLM not reachable: {exc}"
+
+
+# ---------------------------------------------------------------------------
+# Generation benchmark (LLM-backed)
+# ---------------------------------------------------------------------------
+
+
+def run_generation_benchmark_ui(model_id: str = "") -> str:
+    """Run the generation benchmark against the real generator, with an LLM guard.
+
+    Checks LLM availability first; returns a clear error message if the model is
+    not reachable rather than timing out silently.  On success, saves the report
+    to ``benchmarks/reports/`` and returns a markdown summary.
+
+    Args:
+        model_id: Hint for display purposes — the model displayed in the report
+                  config comes from the live router (env vars).
+
+    Returns:
+        Markdown string suitable for display in a ``gr.Markdown`` component.
+    """
+    available, msg = check_llm_available()
+    if not available:
+        return (
+            "## Generation Benchmark — LLM Unavailable\n\n"
+            f"❌ {msg}\n\n"
+            "Check that your local LLM server (LM Studio / Ollama) is running "
+            "and the `LM_STUDIO_BASE_URL` / `OLLAMA_BASE_URL` environment variables "
+            "are set correctly, then click **Run Generation Benchmark** again."
+        )
+
+    if not _GEN_DATASET_PATH.exists():
+        try:
+            rel = _GEN_DATASET_PATH.relative_to(PROJECT_ROOT)
+        except ValueError:
+            rel = _GEN_DATASET_PATH
+        return f"**Generation dataset not found.**\n\nExpected: `{rel}`"
+
+    from benchmarks.generation.runner import run_generation_benchmark
+    from schemas.evaluation import BenchmarkRunConfig
+    from src.llm import get_default_router
+    from src.utils.prompt_loader import get_prompt_hash, get_prompt_version
+
+    router = get_default_router()
+    config = BenchmarkRunConfig(
+        model=model_id or router.primary_model,
+        provider="local",
+        prompt_name="generator",
+        prompt_version=get_prompt_version("generator"),
+        prompt_hash=get_prompt_hash("generator"),
+        temperature=0.1,
+        dataset_version="1.0.0",
+        benchmark_type="generation",
+        timestamp=datetime.now().isoformat(),
+    )
+
+    def _generator_fn(url: str, feature_description: str) -> str:
+        from src.agents.generator import generate_test_script
+
+        try:
+            decision = generate_test_script(url, feature_description)
+            return decision.code
+        except Exception as exc:
+            return f"Error: {exc}"
+
+    try:
+        run = run_generation_benchmark(_GEN_DATASET_PATH, _generator_fn, config)
+    except Exception as exc:
+        logger.exception("Generation benchmark failed: %s", exc)
+        return f"**Generation benchmark failed:** `{exc}`"
+
+    try:
+        report_path = run.save_report(_REPORTS_DIR)
+    except Exception as exc:
+        logger.warning("Could not save generation benchmark report: %s", exc)
+        report_path = None
+
+    pass_icon = "✅" if run.passed == run.total else "⚠️"
+    lines = [
+        f"## {pass_icon} Generation Benchmark",
+        f"**{run.passed}/{run.total} passed** ({run.pass_rate * 100:.0f}%)"
+        f" · mean score {run.mean_score:.2f}"
+        f" · mean latency {run.mean_duration_ms:.0f} ms"
+        f" · model `{config.model}`",
+        "",
+        "| Scenario | Score | Pass |",
+        "| --- | --- | --- |",
+    ]
+    for result in run.results:
+        icon = "✅" if result.passed else "❌"
+        lines.append(f"| `{result.example_id}` | {result.score:.2f} | {icon} |")
+
+    saved_note = (
+        f"`{report_path.name}`" if report_path else "*(report could not be saved)*"
+    )
+    lines += [
+        "",
+        f"*Run at {config.timestamp[:19]}. Report: {saved_note}.*",
+    ]
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------

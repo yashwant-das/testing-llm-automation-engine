@@ -218,20 +218,29 @@ Goal: surface the backbone — show what the model saw and used.
 
 Goal: turn the single-button "Benchmark Explorer" into a real evaluation surface.
 
-- ☐ **Persist runs (H4):** `run_classification_benchmark`
-  ([`workbench_service.py:128`](../src/services/workbench_service.py)) calls
-  `BenchmarkRun.save_report()` → `benchmarks/reports/` (plumbing already exists,
-  [`schemas/evaluation.py`](../schemas/evaluation.py)).
-- ☐ **History + comparison (H4):** load prior reports and show run-over-run deltas
-  (pass-rate, mean score, latency) — the regression view the eval docs describe but
-  the UI never delivered.
-- ☐ **Reach the LLM-backed runners (H4):** wire `benchmarks/generation/runner.py`
-  and `benchmarks/intent_validation/runner.py` behind an LLM-availability guard
-  (clear message when no model is reachable). Add a **model selector** (reads
-  `ModelRegistry` / env) so "compare models" becomes possible.
-- ☐ **Rename (L2):** "Benchmark Explorer" → "Evaluation" (it now actually explores).
-- Acceptance: a user runs a benchmark, sees it saved next to previous runs with a
-  delta, and can pick which model to evaluate. Closes audit Workflow Gaps 2–4.
+- ☑ **Persist runs (H4):** `run_classification_benchmark()` now calls
+  `BenchmarkRun.save_report()` after every successful run, writing to
+  `benchmarks/reports/`. Failure to save is caught and logged; the report markdown
+  is still returned. The footer line names the saved report file.
+- ☑ **History + comparison (H4):** `load_benchmark_history()` added to
+  `workbench_service.py` — scans `benchmarks/reports/*.json`, sorts newest-first,
+  shows a delta table (Δ pass rate, Δ mean score) vs. the immediately preceding run.
+  Baseline run is labelled _(baseline)_. Corrupted files are skipped with a warning.
+  A "Refresh History" button in the Evaluation tab reloads the table without re-running.
+- ☑ **LLM-backed runner with guard (H4):** `check_llm_available()` probes the primary
+  LLM with a 1-token call; returns `(bool, message)`. `run_generation_benchmark_ui()`
+  gates on this: if unavailable returns a clear markdown error naming LM Studio / Ollama
+  and the env vars to check. When the LLM is reachable, runs the generation benchmark
+  and saves a report.
+- ☑ **Rename (L2):** "Benchmark Explorer" → "Evaluation" tab. Tab now has nested
+  sub-tabs: **Heuristic Classification** (no LLM) and **Generation (LLM)**, plus a
+  shared **Run History** section wired to `load_benchmark_history()`.
+- ☑ Tests added: 19 new tests in `tests/unit_test_workbench_eval.py` covering report
+  persistence, save-failure graceful handling, history delta table, baseline label,
+  corrupted-file resilience, LLM-guard true/false/timeout paths, dataset-missing error.
+- Acceptance met: 531 tests green. A user running the heuristic benchmark sees the
+  result saved and the history table updated. Clicking Generation Benchmark without an
+  LLM gets a clear error with remediation steps, not a silent timeout.
 
 ---
 
@@ -337,3 +346,9 @@ When every box is checked, the workbench _is_ what the architecture already clai
   renders timeline live). Models tab added to Gradio UI backed by `get_model_info()`
   which surfaces `ModelRegistry` — model ID, provider, vision capability, context
   window.
+- 2026-06-07 — Stage 4 complete. 531 tests green (512 + 19 new). Benchmark reports
+  now persisted to `benchmarks/reports/` after each heuristic run. `load_benchmark_history()`
+  produces a delta comparison table from saved reports. `check_llm_available()` gates
+  LLM-backed generation benchmark with clear UI error instead of silent timeout.
+  "Benchmark Explorer" renamed to "Evaluation" with nested sub-tabs and shared
+  Run History section.

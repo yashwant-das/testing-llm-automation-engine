@@ -45,8 +45,10 @@ from src.services.workbench_service import (
     get_model_info,
     list_artifacts,
     load_artifact,
+    load_benchmark_history,
     load_traces,
     run_classification_benchmark,
+    run_generation_benchmark_ui,
 )
 
 css = """
@@ -297,22 +299,78 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[artifact_md, artifact_json],
             )
 
-        # ── Tab 5: Benchmark Explorer ───────────────────────────────────────
-        with gr.Tab("Benchmark Explorer"):
+        # ── Tab 5: Evaluation ──────────────────────────────────────────────
+        with gr.Tab("Evaluation"):
             gr.Markdown(
-                "Run the heuristic failure-classification benchmark against the "
-                "`benchmarks/healing/fixtures/repair_scenarios.json` dataset. "
-                "No LLM or browser required — fully deterministic, completes in milliseconds."
+                "Run benchmarks and compare results across runs.  "
+                "Reports are saved to `benchmarks/reports/` so every run "
+                "is tracked for regression detection."
             )
-            benchmark_run_btn = gr.Button(
-                "Run Heuristic Classification Benchmark", variant="primary"
-            )
-            benchmark_out = gr.Markdown("*Click the button to run the benchmark.*")
 
-            benchmark_run_btn.click(
-                fn=run_classification_benchmark,
+            with gr.Tabs():
+                # ── Heuristic classification ────────────────────────────────
+                with gr.Tab("Heuristic Classification"):
+                    gr.Markdown(
+                        "Runs the failure-classification heuristic against "
+                        "`benchmarks/healing/fixtures/repair_scenarios.json`. "
+                        "No LLM or browser required — fully deterministic, "
+                        "completes in milliseconds.  Results are saved to "
+                        "`benchmarks/reports/` and reflected in **Run History**."
+                    )
+                    benchmark_run_btn = gr.Button(
+                        "Run Heuristic Classification Benchmark", variant="primary"
+                    )
+                    benchmark_out = gr.Markdown(
+                        "*Click the button to run the benchmark.*"
+                    )
+
+                    def _run_classification_and_refresh():
+                        result = run_classification_benchmark()
+                        history = load_benchmark_history()
+                        return result, history
+
+                    benchmark_run_btn.click(
+                        fn=_run_classification_and_refresh,
+                        inputs=[],
+                        outputs=[benchmark_out, gr.Markdown(visible=False)],
+                    )
+
+                # ── Generation benchmark (LLM-backed) ──────────────────────
+                with gr.Tab("Generation (LLM)"):
+                    gr.Markdown(
+                        "Runs the generation benchmark against "
+                        "`benchmarks/generation/fixtures/web_scenarios.json`. "
+                        "**Requires a local LLM** — the button checks availability "
+                        "first and shows a clear error if the model is not reachable."
+                    )
+                    gen_bench_btn = gr.Button(
+                        "Run Generation Benchmark", variant="primary"
+                    )
+                    gen_bench_out = gr.Markdown(
+                        "*Click the button to run. LLM must be running.*"
+                    )
+
+                    gen_bench_btn.click(
+                        fn=run_generation_benchmark_ui,
+                        inputs=[],
+                        outputs=[gen_bench_out],
+                    )
+
+            # ── Run history (shared across benchmark types) ─────────────────
+            gr.Markdown("---")
+            with gr.Row():
+                history_refresh_btn = gr.Button("Refresh History", scale=1)
+                gr.Markdown(
+                    "Run-over-run comparison from `benchmarks/reports/`.", scale=5
+                )
+            history_out = gr.Markdown(
+                "*Click Refresh History or run a benchmark above.*"
+            )
+
+            history_refresh_btn.click(
+                fn=load_benchmark_history,
                 inputs=[],
-                outputs=[benchmark_out],
+                outputs=[history_out],
             )
 
         # ── Tab 6: Models ──────────────────────────────────────────────────
