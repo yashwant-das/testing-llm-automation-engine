@@ -1,6 +1,6 @@
 # AI Systems Engineering Guide
 
-> This document uses the AI Testing Workbench as a reference implementation
+> This document uses the AI Engineering Workbench as a reference implementation
 > to explain the engineering patterns required to build reliable AI pipelines.
 > Each section describes a concept, explains why it matters, and shows exactly
 > where and how it is implemented in this codebase.
@@ -11,7 +11,7 @@
 
 Building an application that calls an LLM is easy. Building one that is reliable, debuggable, measurable, and maintainable is hard. The gap between the two is AI Systems Engineering.
 
-The AI Testing Workbench was built specifically to close this gap. Each of the eleven phases of its modernization program addressed a distinct reliability failure: fragile parsing, invisible failures, untestable architecture, unmeasurable quality, untraceble decisions. What remains is a system where every failure is diagnosable and every decision is explainable.
+The AI Engineering Workbench was built specifically to close this gap. Each of the eleven phases of its modernization program addressed a distinct reliability failure: fragile parsing, invisible failures, untestable architecture, unmeasurable quality, untraceble decisions. What remains is a system where every failure is diagnosable and every decision is explainable.
 
 This guide explains the patterns that made that possible.
 

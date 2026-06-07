@@ -40,38 +40,36 @@ def generate_test_streaming(url: str, story: str) -> Iterator[tuple[str, str]]:
         validate_description,
     )
 
-    timeline = "### ⏱️ Generation Timeline\n\n"
+    timeline = "### Generation Timeline\n\n"
 
     # --- Validate ---
-    timeline += "🟢 **Input Validation**: Verifying target URL and user story...\n\n"
+    timeline += "→ Input validation: checking URL and scenario...\n\n"
     yield timeline, ""
 
     try:
         validated_url = validate_and_sanitize_url(url)
         validated_story = validate_description(story)
     except ValidationError as exc:
-        yield timeline + f"🔴 **Validation Error**: {exc}", f"Validation Error: {exc}"
+        yield timeline + f"❌ Validation error: {exc}", f"Validation Error: {exc}"
         return
     except Exception as exc:
-        yield timeline + f"🔴 **Error**: {exc}", f"Error: {exc}"
+        yield timeline + f"❌ Error: {exc}", f"Error: {exc}"
         return
 
     # --- Scan + Generate (both happen inside the agent) ---
-    timeline += "🟢 **Scanning Web Page**: Accessing Chromium browser to capture DOM layout...\n\n"
+    timeline += "→ DOM collection: launching Chromium, collecting page structure...\n\n"
     yield timeline, ""
 
-    timeline += (
-        "🧠 **LLM Inference**: Engineering script structure and selectors...\n\n"
-    )
+    timeline += "→ LLM call: generating test structure and selectors...\n\n"
     yield timeline, ""
 
     code = generate_test_script(validated_url, validated_story)
 
     if not code or code.startswith(("Error", "LLM Error")):
-        yield timeline + f"🔴 **Generation Error**: {code}", code
+        yield timeline + f"❌ Generation error: {code}", code
         return
 
-    timeline += "✅ **Success**: Test script successfully generated!\n\n"
+    timeline += "✅ Generation complete\n\n"
     yield timeline, code
 
 
@@ -94,13 +92,13 @@ def run_test_streaming(url: str, code: str, story: str) -> Iterator[tuple[str, s
         validate_description,
     )
 
-    timeline = "### ⏱️ Test Execution Timeline\n\n"
-    timeline += "🟢 **Sanity Checks**: Verifying script inputs...\n\n"
+    timeline = "### Test Execution Timeline\n\n"
+    timeline += "→ Input validation: checking URL and code...\n\n"
     yield timeline, ""
 
     if not code or not code.strip():
         yield (
-            timeline + "🔴 **Input Error**: No test code provided",
+            timeline + "❌ Input error: no test code provided",
             "Error: No test code provided",
         )
         return
@@ -109,14 +107,14 @@ def run_test_streaming(url: str, code: str, story: str) -> Iterator[tuple[str, s
         validated_url = validate_and_sanitize_url(url)
         validated_story = validate_description(story) if story else "test"
     except ValidationError as exc:
-        yield timeline + f"🔴 **Validation Error**: {exc}", f"Validation Error: {exc}"
+        yield timeline + f"❌ Validation error: {exc}", f"Validation Error: {exc}"
         return
     except Exception as exc:
-        yield timeline + f"🔴 **Error**: {exc}", f"Error: {exc}"
+        yield timeline + f"❌ Error: {exc}", f"Error: {exc}"
         return
 
     # --- Write spec file ---
-    timeline += "🟢 **Writing Spec File**: Saving test script to workspace...\n\n"
+    timeline += "→ Writing spec file to tests/generated/...\n\n"
     yield timeline, ""
 
     try:
@@ -131,49 +129,45 @@ def run_test_streaming(url: str, code: str, story: str) -> Iterator[tuple[str, s
         filepath = TEST_DIR / filename
         filepath.write_text(code, encoding="utf-8")
     except Exception as exc:
-        yield timeline + f"🔴 **File Error**: {exc}", f"Error writing file: {exc}"
+        yield timeline + f"❌ File error: {exc}", f"Error writing file: {exc}"
         return
 
     # --- Run with Playwright ---
-    timeline += f"🟢 **Playwright Test Runner**: Launching `npx playwright test {filename}`...\n\n"
-    yield timeline, "Running tests in workspace..."
+    timeline += f"→ Playwright runner: `npx playwright test {filename}`\n\n"
+    yield timeline, "Running tests..."
 
     try:
         result = subprocess.run(
             ["npx", "playwright", "test", str(filepath)],
             capture_output=True,
             text=True,
-            timeout=45,
+            timeout=60,
             cwd=str(PROJECT_ROOT),
         )
 
         if result.returncode == 0:
-            timeline += "✅ **Test Passed**: Spec file ran successfully!\n\n"
+            timeline += "✅ Exit code 0 — test passed\n\n"
             yield (
                 timeline,
                 format_test_result(str(filepath), result.stdout, success=True),
             )
         else:
-            timeline += (
-                "❌ **Test Failed**: Playwright returned non-zero exit code.\n\n"
-            )
+            timeline += f"❌ Exit code {result.returncode} — test failed\n\n"
             raw_logs = result.stdout if result.stdout else result.stderr
             yield timeline, format_test_result(str(filepath), raw_logs, success=False)
 
     except subprocess.TimeoutExpired:
-        timeline += (
-            "🔴 **Timeout Error**: Playwright test timed out after 45 seconds.\n\n"
-        )
+        timeline += "❌ Timeout: Playwright did not complete within 60 seconds\n\n"
         yield (
             timeline,
-            f"Error: Test execution timed out after 45 seconds.\nStored in: {filepath}",
+            f"Error: Test execution timed out after 60 seconds.\nStored in: {filepath}",
         )
     except FileNotFoundError:
-        timeline += "🔴 **Environment Error**: Playwright executable not found.\n\n"
+        timeline += "❌ Environment error: Playwright executable not found\n\n"
         yield (
             timeline,
             "Error: Playwright not found. Please run 'npx playwright install'",
         )
     except Exception as exc:
-        timeline += f"🔴 **Execution Error**: {exc}\n\n"
+        timeline += f"❌ Execution error: {exc}\n\n"
         yield timeline, f"Execution Error: {exc}\nStored in: {filepath}"

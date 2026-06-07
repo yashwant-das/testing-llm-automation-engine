@@ -45,10 +45,10 @@ def analyze_visual_streaming(
         validate_description,
     )
 
-    timeline = "### ⏱️ Visual Timeline\n\n"
+    timeline = "### Vision Timeline\n\n"
 
     # --- Validate ---
-    timeline += "🟢 **Input Validation**: Verifying target URL and instruction...\n\n"
+    timeline += "→ Input validation: checking URL and instruction...\n\n"
     yield timeline, None, ""
 
     try:
@@ -56,26 +56,21 @@ def analyze_visual_streaming(
         validated_instruction = validate_description(instruction)
     except ValidationError as exc:
         yield (
-            timeline + f"🔴 **Validation Error**: {exc}",
+            timeline + f"❌ Validation error: {exc}",
             None,
             f"Validation Error: {exc}",
         )
         return
     except Exception as exc:
-        yield timeline + f"🔴 **Error**: {exc}", None, f"Error: {exc}"
+        yield timeline + f"❌ Error: {exc}", None, f"Error: {exc}"
         return
 
     # --- Capture screenshot ---
-    timeline += (
-        "🟢 **Chromium Browser Initialization**: Pre-heating headless runner...\n\n"
-    )
+    timeline += "→ Screenshot: launching Playwright, navigating to URL...\n\n"
     yield timeline, None, ""
 
     clean_inst = re.sub(r"[^a-zA-Z0-9\s]", "", validated_instruction).lower()
     snake_inst = "_".join(clean_inst.split())[:30]
-
-    timeline += "🟢 **Screenshot Capturing**: Navigating page and rendering view...\n\n"
-    yield timeline, None, ""
 
     try:
         screenshot_path = capture_screenshot(
@@ -86,7 +81,7 @@ def analyze_visual_streaming(
         )
     except Exception as exc:
         yield (
-            timeline + f"🔴 **Browser Capture Error**: {exc}",
+            timeline + f"❌ Screenshot error: {exc}",
             None,
             f"Error capturing screenshot: {exc}",
         )
@@ -94,35 +89,30 @@ def analyze_visual_streaming(
 
     if not os.path.exists(screenshot_path):
         yield (
-            timeline + "🔴 **Browser Error**: Screenshot creation failed",
+            timeline + "❌ Screenshot not created",
             None,
             f"Error: Screenshot was not created at {screenshot_path}",
         )
         return
 
     # Yield screenshot preview before the (slow) LLM call
-    timeline += "🖼️ **Screenshot Captured**: Displaying active viewport render!\n\n"
+    timeline += "✅ Screenshot captured\n\n"
     yield timeline, screenshot_path, ""
 
     # --- Encode screenshot ---
-    timeline += "🟢 **Encoding Screenshot**: Compressing image bytes to base64...\n\n"
-    yield timeline, screenshot_path, ""
-
     try:
         with open(screenshot_path, "rb") as f:
             base64_image = base64.b64encode(f.read()).decode("utf-8")
     except Exception as exc:
         yield (
-            timeline + f"🔴 **Encoding Error**: {exc}",
+            timeline + f"❌ Encoding error: {exc}",
             screenshot_path,
             f"Error: {exc}",
         )
         return
 
     # --- Vision LLM ---
-    timeline += (
-        "🧠 **Visual AI Inference**: Calling vision LLM to interpret UI layout...\n\n"
-    )
+    timeline += "→ LLM call: vision model analyzing screenshot...\n\n"
     yield timeline, screenshot_path, ""
 
     try:
@@ -153,7 +143,7 @@ def analyze_visual_streaming(
 
         if not llm_response.content:
             yield (
-                timeline + "🔴 **LLM Error**: Vision model returned empty response",
+                timeline + "❌ LLM error: vision model returned empty response",
                 screenshot_path,
                 "Error: Vision LLM returned empty response",
             )
@@ -164,7 +154,7 @@ def analyze_visual_streaming(
             result = GenerationResult(code=extracted)
         except ValueError as exc:
             yield (
-                timeline + f"🔴 **Code Extraction Error**: {exc}",
+                timeline + f"❌ Code extraction error: {exc}",
                 screenshot_path,
                 f"Error: Could not extract valid code from vision LLM response: {exc}",
             )
@@ -172,13 +162,13 @@ def analyze_visual_streaming(
 
     except Exception as exc:
         yield (
-            timeline + f"🔴 **LLM Error**: {exc}",
+            timeline + f"❌ LLM error: {exc}",
             screenshot_path,
             f"Vision LLM Error: {exc}",
         )
         return
 
-    timeline += "✅ **Success**: Visual-based test script successfully generated!\n\n"
+    timeline += "✅ Generation complete\n\n"
     yield timeline, screenshot_path, result.code
 
 

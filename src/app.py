@@ -1,5 +1,5 @@
 """
-AI Testing Workbench — Gradio interface.
+AI Engineering Workbench — Gradio interface.
 
 UI wiring only.  All pipeline logic lives in src/services/.
 All inspector/benchmark logic lives in src/services/workbench_service.py.
@@ -23,12 +23,17 @@ if str(PROJECT_ROOT) not in sys.path:
 
 import gradio as gr
 
+from src.observability import configure_tracer
+
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
 logger = logging.getLogger(__name__)
+
+# Activate the JSONL tracer so every pipeline run writes spans to logs/traces.jsonl.
+configure_tracer()
 
 from src.services.generation_service import generate_test_streaming, run_test_streaming
 from src.services.healing_service import heal_test_streaming
@@ -86,8 +91,8 @@ def on_artifact_select(name: str) -> tuple[str, dict]:
 # UI
 # ---------------------------------------------------------------------------
 
-with gr.Blocks(title="AI Testing Workbench", css=css) as demo:
-    gr.Markdown("# AI Testing Workbench")
+with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
+    gr.Markdown("# AI Engineering Workbench")
     gr.Markdown(
         "Reference implementation: structured LLM outputs · "
         "evaluation · observability · AST-based repair · explainability"

@@ -34,6 +34,10 @@ __all__ = [
 if __name__ == "__main__":
     import argparse
 
+    from src.observability import configure_tracer
+
+    configure_tracer()
+
     parser = argparse.ArgumentParser(
         description="Self-healing agent for automatically repairing broken Playwright tests."
     )

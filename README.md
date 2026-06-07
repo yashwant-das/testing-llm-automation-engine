@@ -1,4 +1,4 @@
-# AI Testing Workbench
+# AI Engineering Workbench
 
 > A reference implementation of AI Systems Engineering for Playwright test automation.
 > Structured outputs · AST repair · evaluation · observability · explainability · local LLM.

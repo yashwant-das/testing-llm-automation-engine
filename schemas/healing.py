@@ -46,6 +46,18 @@ class RepairStrategy(str, Enum):
     ASSERTION_SWAP = "assertion_swap"
 
 
+# Single source of truth for strategy → human-readable label.
+# Used by the UI timeline and by artifact reports so both surfaces agree.
+REPAIR_STRATEGY_LABELS: dict[RepairStrategy, str] = {
+    RepairStrategy.STRING_REPLACE: "String replaced",
+    RepairStrategy.SELECTOR_REPLACE: "Selector replaced",
+    RepairStrategy.IMPORT_ADD: "Import added",
+    RepairStrategy.TIMEOUT_ADJUST: "Timeout adjusted",
+    RepairStrategy.ROLE_ARGUMENT: "Role argument updated",
+    RepairStrategy.ASSERTION_SWAP: "Assertion swapped",
+}
+
+
 class HealingAction(BaseModel):
     """The specific code change proposed or applied during healing."""
 

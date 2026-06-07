@@ -1,6 +1,6 @@
 # Docker Workflow Guide
 
-This guide covers building and running the Testing LLM Automation Engine in Docker, including manual debugging and healing workflows.
+This guide covers building and running the AI Engineering Workbench in Docker, including manual debugging and healing workflows.
 
 ## Prerequisites
 
