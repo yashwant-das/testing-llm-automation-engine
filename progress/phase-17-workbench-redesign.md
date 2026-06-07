@@ -318,16 +318,24 @@ Goal: reorganize navigation around the now-real backbone. Done last on purpose.
 
 ## Success criteria (the audit's core questions, answered "yes" — by the UI)
 
-- ☐ Understand how the system works — from the app (overview + topology).
-- ☐ Trust it — every claim true at runtime; no empty panels the docs say are full.
-- ☐ Inspect & validate decisions — uniform provenance-bearing artifacts for all
+- ☑ Understand how the system works — from the app (overview + topology).
+  → Stage 5: Overview tab with ASCII topology + navigation guide.
+- ☑ Trust it — every claim true at runtime; no empty panels the docs say are full.
+  → Stage 1: observability activated, timeline language corrected, name unified.
+- ☑ Inspect & validate decisions — uniform provenance-bearing artifacts for all
   three pipelines.
-- ☐ Evaluate model quality & compare runs — real evaluation workspace with history.
-- ☐ Investigate failures end-to-end — artifact ↔ trace ↔ timeline linked.
-- ☐ Understand why a decision was made — context the model saw is inspectable.
-- ☐ The system names itself one thing everywhere.
+  → Stages 2 + 3: `ProvenanceRecord`, `GenerationDecision`, `VisionDecision`,
+  Evidence Context + Context Snapshot in every `to_markdown()`.
+- ☑ Evaluate model quality & compare runs — real evaluation workspace with history.
+  → Stage 4: Evaluation tab, `save_report()`, delta history table.
+- ☑ Investigate failures end-to-end — artifact ↔ trace ↔ timeline linked.
+  → Stage 2: `trace_id` on every artifact; Stage 3: Trace Inspector populated.
+- ☑ Understand why a decision was made — context the model saw is inspectable.
+  → Stage 3: DOM, a11y tree, locator candidates, console errors in every report.
+- ☑ The system names itself one thing everywhere.
+  → Stage 1c: "AI Engineering Workbench" propagated to all docs and UI.
 
-When every box is checked, the workbench _is_ what the architecture already claimed.
+**Phase 17 complete. 553 tests green. Every audit criterion met.**
 
 ---
 
