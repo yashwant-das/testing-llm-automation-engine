@@ -30,7 +30,7 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
 | Capability | Implementation |
 | --- | --- |
 | Test generation from DOM + accessibility tree | `src/services/generation_service.py` → `src/agents/generator.py` |
-| Test generation from screenshot | `src/services/vision_service.py` → `src/agents/vision.py` |
+| Test generation from screenshot | `src/services/vision_service.py` |
 | Self-healing pipeline | `src/services/healing_service.py` → `src/healing/` |
 | Structured LLM outputs | `schemas/` + `src/utils/llm.parse_llm_response()` |
 | AST-based code repair | `src/healing/repair.py` + `scripts/ast_repair.js` (ts-morph) |
@@ -177,8 +177,7 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── app.py                    # Gradio UI — 6-tab workbench, wiring only
 │   ├── agents/                   # Agent shims (compatibility layer)
 │   │   ├── generator.py
-│   │   ├── healer.py             # Thin shim → src/healing/
-│   │   └── vision.py
+│   │   └── healer.py             # Thin shim → src/healing/ + CLI entrypoint
 │   ├── services/                 # Service layer (UI → pipelines boundary)
 │   │   ├── generation_service.py
 │   │   ├── healing_service.py
@@ -248,7 +247,9 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── decisions.md              # Architecture Decision Records
 │   ├── scorecard.md              # Repository maturity scorecard
 │   ├── backlog.md                # Future work and research topics
-│   └── GOVERNANCE.md             # Documentation governance rules
+│   ├── GOVERNANCE.md             # Documentation governance rules
+│   ├── DOCKER.md                 # Docker setup and deployment
+│   └── ENV_VARIABLES.md          # Environment variable reference
 ├── tests/
 │   ├── unit_test_*.py            # 440 unit tests (zero live LLM or browser calls)
 │   ├── fixtures/                 # Broken .spec.ts files for benchmark/repair testing

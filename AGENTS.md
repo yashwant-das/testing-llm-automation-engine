@@ -21,8 +21,7 @@ src/
 ├── app.py                # Gradio UI — 6-tab workbench, wiring only
 ├── agents/               # Compatibility shims (do not add new logic here)
 │   ├── generator.py      # Delegates to src/context/ + src/llm/
-│   ├── healer.py         # Thin shim → src/healing/ (targeted for removal)
-│   └── vision.py         # Vision pipeline
+│   └── healer.py         # Thin shim → src/healing/ + CLI entrypoint
 ├── services/             # Service layer — the boundary between UI and pipelines
 │   ├── generation_service.py
 │   ├── healing_service.py
@@ -50,7 +49,7 @@ src/
 │   ├── writer.py         # Thread-safe JSONL appender
 │   └── schemas.py        # Span models
 └── utils/
-    ├── llm.py            # parse_llm_response() — public API. Other functions deprecated.
+    ├── llm.py            # parse_llm_response(), extract_json_block(), extract_code_block()
     ├── prompt_loader.py  # load_prompt(), get_prompt_hash(), get_prompt_version()
     └── validation.py     # Input validation
 
@@ -163,11 +162,14 @@ npm run test
 Active documentation lives in:
 
 - `README.md` — entry point, architecture overview, quick start
+- `AGENTS.md` — this file (AI assistant context)
 - `docs/decisions.md` — all Architecture Decision Records (ADR-001 through ADR-011)
 - `docs/architecture/` — per-subsystem architecture docs
 - `docs/development/` — contributor guides
 - `docs/evaluation/` — benchmark and evaluation methodology
 - `docs/prompts/` — prompt engineering documentation
+- `docs/ENV_VARIABLES.md` — all environment variables with defaults
+- `docs/DOCKER.md` — Docker setup and deployment
 
 Historical documents (completed plans, pre-decision evaluations) are in `docs/history/`.
 
