@@ -96,13 +96,24 @@ class GenerationDecision(ProvenanceRecord):
         snapshot_str = (
             f"`{self.context_snapshot_id}`" if self.context_snapshot_id else "*(n/a)*"
         )
-        ctx_nodes = "*(not captured)*"
+        ctx_parts: list[str] = []
         if self.context_snapshot:
-            locator_count = len(self.context_snapshot.locator_candidates)
-            console_count = len(self.context_snapshot.console_errors)
-            ctx_nodes = (
-                f"{locator_count} locator candidates, {console_count} console errors"
-            )
+            snap = self.context_snapshot
+            if snap.html:
+                excerpt = snap.html[:500].replace("```", "` ` `")
+                ctx_parts.append(f"**DOM (first 500 chars):**\n```html\n{excerpt}\n```")
+            if snap.accessibility_tree:
+                excerpt = snap.accessibility_tree[:500]
+                ctx_parts.append(
+                    f"**Accessibility Tree (first 500 chars):**\n```\n{excerpt}\n```"
+                )
+            if snap.locator_candidates:
+                cands = "\n".join(f"- `{c}`" for c in snap.locator_candidates[:10])
+                ctx_parts.append(f"**Locator Candidates:**\n{cands}")
+            if snap.console_errors:
+                errs = "\n".join(f"- {e}" for e in snap.console_errors[:5])
+                ctx_parts.append(f"**Console Errors:**\n{errs}")
+        ctx_md = "\n\n".join(ctx_parts) if ctx_parts else "*(no page context captured)*"
 
         return f"""# Generation Report: {self.timestamp}
 
@@ -117,10 +128,11 @@ class GenerationDecision(ProvenanceRecord):
 
 *{self.line_count} lines*
 
-## Context
+## Context Snapshot
 
-- **DOM / a11y snapshot:** {ctx_nodes}
-- **Context Snapshot ID:** {snapshot_str}
+*Snapshot ID: {snapshot_str}*
+
+{ctx_md}
 
 ## Provenance
 

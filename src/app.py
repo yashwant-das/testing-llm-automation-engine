@@ -42,6 +42,7 @@ from src.services.vision_service import (
     run_vision_test_streaming,
 )
 from src.services.workbench_service import (
+    get_model_info,
     list_artifacts,
     load_artifact,
     load_traces,
@@ -314,7 +315,25 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[benchmark_out],
             )
 
-        # ── Tab 6: Trace Inspector ──────────────────────────────────────────
+        # ── Tab 6: Models ──────────────────────────────────────────────────
+        with gr.Tab("Models"):
+            gr.Markdown(
+                "Active models read from environment variables "
+                "(`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, "
+                "`OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`).  "
+                "Shows capability metadata registered in `ModelRegistry`."
+            )
+            with gr.Row():
+                models_refresh_btn = gr.Button("Refresh", variant="primary")
+            models_out = gr.Markdown("*Click Refresh to load model registry.*")
+
+            models_refresh_btn.click(
+                fn=get_model_info,
+                inputs=[],
+                outputs=[models_out],
+            )
+
+        # ── Tab 7: Trace Inspector ──────────────────────────────────────────
         with gr.Tab("Trace Inspector"):
             gr.Markdown(
                 "Inspect JSONL traces written to `logs/traces.jsonl` by the observability "

@@ -342,6 +342,27 @@ class HealingDecision(ProvenanceRecord):
 
         rationale_md = self.confidence_rationale or "*(not provided)*"
 
+        # Build evidence context block from any collected page context
+        ev = self.evidence
+        ctx_parts: list[str] = []
+        if ev.dom_snippet:
+            excerpt = ev.dom_snippet[:500].replace("```", "` ` `")
+            ctx_parts.append(f"**DOM (first 500 chars):**\n```html\n{excerpt}\n```")
+        if ev.accessibility_tree:
+            excerpt = ev.accessibility_tree[:500]
+            ctx_parts.append(
+                f"**Accessibility Tree (first 500 chars):**\n```\n{excerpt}\n```"
+            )
+        if ev.locator_candidates:
+            cands = "\n".join(f"- `{c}`" for c in ev.locator_candidates[:10])
+            ctx_parts.append(f"**Locator Candidates:**\n{cands}")
+        if ev.console_errors:
+            errs = "\n".join(f"- {e}" for e in ev.console_errors[:5])
+            ctx_parts.append(f"**Console Errors:**\n{errs}")
+        evidence_context_md = (
+            "\n\n".join(ctx_parts) if ctx_parts else "*(no page context collected)*"
+        )
+
         return f"""# Healing Report: {self.timestamp}
 
 **File:** `{self.test_file}`
@@ -360,6 +381,10 @@ class HealingDecision(ProvenanceRecord):
 ## Root Cause Evidence
 
 {rce_md}
+
+## Evidence Context
+
+{evidence_context_md}
 
 ## Resolution
 

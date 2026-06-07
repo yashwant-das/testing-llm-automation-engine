@@ -470,7 +470,14 @@ class TestEmitArtifacts(unittest.TestCase):
             failure_type=FailureType.LOCATOR_DRIFT,
         )
 
-    def test_writes_two_json_files(self):
+    def test_writes_one_json_file(self):
+        """emit_artifacts() writes only the healing_decision_*.json file.
+
+        execution_timeline_*.json is no longer written (Phase 17 Stage 3 M2
+        decision): the timeline is shown live in the streaming UI and the
+        decision artifact carries all decision-level data needed for later
+        inspection.
+        """
         with tempfile.TemporaryDirectory() as tmpdir:
             artifacts_dir = Path(tmpdir)
             decision = self._make_decision_for_artifacts()
@@ -482,7 +489,8 @@ class TestEmitArtifacts(unittest.TestCase):
                 emit_artifacts(decision, timeline)
 
             json_files = sorted(artifacts_dir.glob("*.json"))
-            self.assertEqual(len(json_files), 2)
+            self.assertEqual(len(json_files), 1)
+            self.assertTrue(json_files[0].name.startswith("healing_decision_"))
 
     def test_decision_file_is_valid_json(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -500,7 +508,8 @@ class TestEmitArtifacts(unittest.TestCase):
             parsed = json.loads(content)
             self.assertIn("failure_type", parsed)
 
-    def test_timeline_file_is_valid_json(self):
+    def test_timeline_not_written(self):
+        """execution_timeline_*.json is NOT written (M2 decision)."""
         with tempfile.TemporaryDirectory() as tmpdir:
             artifacts_dir = Path(tmpdir)
             decision = self._make_decision_for_artifacts()
@@ -511,10 +520,7 @@ class TestEmitArtifacts(unittest.TestCase):
                 emit_artifacts(decision, timeline)
 
             timeline_files = list(artifacts_dir.glob("execution_timeline_*.json"))
-            self.assertEqual(len(timeline_files), 1)
-            content = timeline_files[0].read_text(encoding="utf-8")
-            parsed = json.loads(content)
-            self.assertIn("steps", parsed)
+            self.assertEqual(len(timeline_files), 0)
 
     def test_file_names_contain_timestamp(self):
         with tempfile.TemporaryDirectory() as tmpdir:

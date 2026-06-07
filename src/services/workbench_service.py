@@ -9,6 +9,7 @@ Public API:
     load_artifact(path)             -> (str, dict)   — (markdown, raw dict)
     run_classification_benchmark()  -> str           — markdown report
     load_traces()                   -> (str, str)    — (markdown body, summary label)
+    get_model_info()                -> str           — markdown table of registered models
 """
 
 from __future__ import annotations
@@ -307,3 +308,55 @@ def load_traces() -> tuple[str, str]:
 
     lines.append(f"*Showing up to {_TRACE_DISPLAY_LIMIT} most recent spans per type.*")
     return "\n".join(lines), summary_label
+
+
+# ---------------------------------------------------------------------------
+# Model Registry
+# ---------------------------------------------------------------------------
+
+
+def get_model_info() -> str:
+    """Return a markdown table of all models registered in ModelRegistry.
+
+    Reads the environment variables (``LM_STUDIO_MODEL``, ``OLLAMA_MODEL``, etc.)
+    and populates ModelRegistry.  Safe to call repeatedly — each call re-reads
+    the environment so live config changes are reflected on refresh.
+
+    Returns:
+        Markdown string with one row per registered model.
+    """
+    from src.llm.registry import ModelRegistry
+
+    # Re-populate from env each time so the panel reflects current config.
+    ModelRegistry.clear()
+    ModelRegistry.from_env()
+    models = ModelRegistry.all_models()
+
+    if not models:
+        return (
+            "## Model Registry\n\n"
+            "*No models registered. Check that `LM_STUDIO_MODEL` / "
+            "`OLLAMA_MODEL` environment variables are set.*"
+        )
+
+    lines = [
+        "## Model Registry",
+        "",
+        "Populated from environment variables at startup.  "
+        "Click **Refresh** to re-read after changing `.env`.",
+        "",
+        "| Model ID | Provider | Vision | Context Window | Description |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    for m in models:
+        vision_icon = "✅" if m.is_vision_capable else "—"
+        lines.append(
+            f"| `{m.model_id}` | {m.provider} | {vision_icon}"
+            f" | {m.context_window:,} | {m.description} |"
+        )
+
+    lines += [
+        "",
+        f"*{len(models)} model(s) registered.*",
+    ]
+    return "\n".join(lines)

@@ -185,23 +185,32 @@ This is the foundation Stages 3–5 surface.
 
 Goal: surface the backbone — show what the model saw and used.
 
-- ☐ **Context inspector (H3):** render the `ContextSnapshot` (DOM excerpt, a11y
-  tree, locator candidates, console errors) for generation, vision, and in the
-  healing evidence panel. The data is already collected
-  ([`src/agents/generator.py`](../src/agents/generator.py),
-  [`schemas/artifacts.py`](../schemas/artifacts.py)); this is pure surfacing.
-  Lets a skeptic verify the model "wasn't handed the answer."
-- ☐ **Execution timelines (M2):** the orphaned `execution_timeline_*.json`
-  ([`artifact_store.py:38`](../src/healing/artifact_store.py)) become visible inside
-  the unified artifact view (paired with the decision they belong to). If we decide
-  they add no value, **stop writing them** instead — explicitly one or the other,
-  never written-but-hidden.
-- ☐ **Model panel (M4):** surface [`ModelRegistry`](../src/llm/registry.py) — active
-  model, provider, vision-capability, context window, and the fallback chain — as a
-  small read-only panel.
-- Acceptance: from any run's artifact a user can open the exact context the model
-  received and see which model answered. No artifact written to disk is unreachable
-  from the UI.
+- ☑ **Context inspector (H3):** `HealingDecision.to_markdown()` now renders an
+  **Evidence Context** section — DOM snippet (first 500 chars), accessibility tree
+  (first 500 chars), locator candidates (up to 10), console errors (up to 5).
+  `GenerationDecision.to_markdown()` expanded from a bare count to a **Context
+  Snapshot** section with the same fields drawn from the embedded `ContextSnapshot`.
+  `VisionDecision` has no context snapshot — it uses a screenshot, which was already
+  rendered. All three pipelines now expose what the model was given.
+- ☑ **Execution timelines (M2):** decision made — **stop writing them**.
+  `execution_timeline_*.json` was written-but-hidden; the streaming UI already
+  renders the timeline live and the healing decision artifact carries all
+  decision-level data. `emit_artifacts()` now calls `emit_decision()` internally and
+  ignores the `timeline` argument (kept for call-site backward compat). Test updated
+  to assert one file, not two.
+- ☑ **Model panel (M4):** added `get_model_info()` to `workbench_service.py`.
+  Calls `ModelRegistry.from_env()` and returns a markdown table with model ID,
+  provider, vision capability, context window, and description — refreshes on every
+  call so live config changes are reflected. Added **Models** tab (Tab 6) to `app.py`
+  with a Refresh button wired to `get_model_info()`.
+- ☑ Tests added: 28 new tests in `tests/unit_test_visibility.py` covering
+  HealingDecision Evidence Context rendering, GenerationDecision Context Snapshot
+  rendering, emit_artifacts() single-file assertion, and get_model_info() table
+  output and env-refresh behavior.
+- Acceptance met: 512 tests green. From any artifact the inspector now shows the
+  DOM, a11y tree, and locator candidates the model received. No artifact is written
+  to disk and left unreachable. Active model capabilities are surfaced in the Models
+  tab.
 
 ---
 
@@ -321,3 +330,10 @@ When every box is checked, the workbench _is_ what the architecture already clai
   `emit_decision()` generalizes artifact writes across all pipeline types.
   `list_artifacts()` and `load_artifact()` dispatch across all three artifact types.
   Tracer sessions and `trace_id` wired in generation and vision services.
+- 2026-06-07 — Stage 3 complete. 512 tests green (484 + 28 new). Evidence Context
+  and Context Snapshot sections added to all `to_markdown()` outputs — DOM excerpt,
+  a11y tree, locator candidates, console errors now visible in Artifact Inspector.
+  `execution_timeline_*.json` stopped (M2 decision: written-but-hidden; streaming UI
+  renders timeline live). Models tab added to Gradio UI backed by `get_model_info()`
+  which surfaces `ModelRegistry` — model ID, provider, vision capability, context
+  window.
