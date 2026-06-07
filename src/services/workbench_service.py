@@ -7,6 +7,9 @@ and benchmark results.  No AI calls are made from this module.
 Public API:
     list_artifacts()                -> list[str]     — file paths, newest-first
     load_artifact(path)             -> (str, dict)   — (markdown, raw dict)
+    load_most_recent_artifact()     -> (str, dict)   — newest artifact (IA-4 auto-populate)
+    load_run_history(limit)         -> str           — unified cross-pipeline run table
+    get_system_overview()           -> str           — static system description markdown
     run_classification_benchmark()  -> str           — markdown report (saves to benchmarks/reports/)
     load_benchmark_history()        -> str           — markdown delta table from saved reports
     check_llm_available()           -> (bool, str)   — LLM reachability probe
@@ -111,6 +114,180 @@ def load_artifact(artifact_path: str) -> tuple[str, dict]:
         )
 
     return md, raw
+
+
+# ---------------------------------------------------------------------------
+# Information architecture helpers (Stage 5)
+# ---------------------------------------------------------------------------
+
+_RUN_HISTORY_LIMIT = 20  # max runs shown in the unified history table
+
+#: Static markdown describing the system — rendered in the Overview tab.
+_SYSTEM_OVERVIEW_MD = """\
+## What is this?
+
+The **AI Engineering Workbench** is a reference implementation for production-grade
+AI-assisted test automation. It demonstrates how to build LLM-powered pipelines that
+are observable, evaluable, and self-healing — using local models (LM Studio / Ollama)
+with no cloud dependency.
+
+## Pipeline topology
+
+```text
+URL + scenario
+    │
+    ▼
+Generation Pipeline ──▶ Playwright test file
+    │
+    ▼ (test fails)
+Healing Pipeline ───────▶ LLM + AST repair ──▶ repaired test
+    │
+    ▼ (screenshot path)
+Vision Pipeline ────────▶ vision LLM ─────────▶ test from screenshot
+    │
+    All three pipelines write decision artifacts to tests/artifacts/
+    └── Artifact Inspector · Run History · Evaluation · Trace Inspector
+```
+
+## Navigation guide
+
+**Pipelines** — LLM-backed authoring surfaces (tabs 2–4):
+
+- **Generation Pipeline** — give a URL and scenario, get a Playwright test
+- **Healing Pipeline** — give a failing test, get an LLM-repaired version
+- **Vision Pipeline** — give a URL, get a test generated from a screenshot
+
+**Engineering** — observability and quality surfaces (tabs 5–8):
+
+- **Artifact Inspector** — browse every decision artifact with full provenance
+- **Run History** — unified cross-pipeline timeline, one row per artifact
+- **Evaluation** — run repeatable benchmarks and track pass-rate over time
+- **Trace Inspector** — inspect OpenTelemetry spans from every session
+- **Models** — see which LLM models are registered and their capabilities
+"""
+
+
+def get_system_overview() -> str:
+    """Return static system overview markdown for the Overview tab.
+
+    Returns:
+        Markdown string describing the system, pipeline topology, and navigation.
+    """
+    return _SYSTEM_OVERVIEW_MD
+
+
+def _pipeline_label(filename: str) -> str:
+    """Infer a human-readable pipeline name from an artifact filename."""
+    if filename.startswith("healing_decision"):
+        return "Healing"
+    if filename.startswith("generation_decision"):
+        return "Generation"
+    if filename.startswith("vision_decision"):
+        return "Vision"
+    return "Unknown"
+
+
+def _run_status(data: dict, pipeline: str) -> str:
+    """Infer a status badge from artifact data."""
+    if pipeline == "Healing":
+        passed = data.get("verification_passed")
+        if passed is True:
+            return "✅ Healed"
+        if passed is False:
+            return "❌ Failed"
+        return "—"
+    return "✅ Done"
+
+
+def load_run_history(limit: int = _RUN_HISTORY_LIMIT) -> str:
+    """Return a unified cross-pipeline run history table.
+
+    Reads all decision artifacts from ``tests/artifacts/`` (healing, generation,
+    and vision), sorts them newest-first, and renders a markdown table with one
+    row per run.  This is the "Unified Run History" surface (Phase 17 Opportunity 7).
+
+    Args:
+        limit: Maximum number of rows to show (default 20).
+
+    Returns:
+        Markdown string with a run table, or a placeholder if no artifacts exist.
+    """
+    if not _ARTIFACTS_DIR.exists():
+        return (
+            "## Recent Runs\n\n"
+            "*Artifacts directory not found. Run a pipeline to create the first artifact.*"
+        )
+
+    patterns = [
+        "healing_decision_*.json",
+        "generation_decision_*.json",
+        "vision_decision_*.json",
+    ]
+    files: list[Path] = []
+    for pat in patterns:
+        files.extend(_ARTIFACTS_DIR.glob(pat))
+
+    if not files:
+        return (
+            "## Recent Runs\n\n"
+            "*No decision artifacts found yet. Run a pipeline to see results here.*"
+        )
+
+    files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    files = files[:limit]
+
+    rows: list[tuple[str, str, str, str, str, str]] = []
+    for path in files:
+        try:
+            data: dict = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:
+            logger.warning("Could not read artifact %s: %s", path.name, exc)
+            continue
+
+        pipeline = _pipeline_label(path.name)
+        timestamp = (data.get("timestamp") or "")[:19] or "—"
+        model = data.get("model_used") or "—"
+        trace_id = data.get("trace_id") or ""
+        status = _run_status(data, pipeline)
+        trace_str = f"`{trace_id[:8]}…`" if trace_id else "—"
+        rows.append((timestamp, pipeline, model, status, path.name, trace_str))
+
+    if not rows:
+        return "## Recent Runs\n\n*No valid artifacts found.*"
+
+    lines = [
+        "## Recent Runs",
+        "",
+        f"Showing {len(rows)} most recent run(s) across all pipelines — newest first.",
+        "",
+        "| Timestamp | Pipeline | Model | Status | Artifact | Trace |",
+        "| --- | --- | --- | --- | --- | --- |",
+    ]
+    for timestamp, pipeline, model, status, artifact, trace_str in rows:
+        lines.append(
+            f"| {timestamp} | {pipeline} | {model} | {status} | `{artifact}` | {trace_str} |"
+        )
+    lines += ["", f"*Updated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"]
+    return "\n".join(lines)
+
+
+def load_most_recent_artifact() -> tuple[str, dict]:
+    """Load the most recently written decision artifact.
+
+    Used by the IA-4 auto-populate: after a pipeline run completes, the
+    Artifact Inspector auto-loads the new artifact without a manual Refresh.
+
+    Returns:
+        ``(markdown_report, raw_dict)`` in the same format as :func:`load_artifact`.
+        Returns a placeholder tuple if no artifacts exist.
+    """
+    paths = list_artifacts()
+    if not paths:
+        return (
+            "*No artifacts found yet. Run a pipeline to create the first artifact.*",
+            {},
+        )
+    return load_artifact(paths[0])
 
 
 # ---------------------------------------------------------------------------

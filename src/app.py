@@ -4,13 +4,18 @@ AI Engineering Workbench — Gradio interface.
 UI wiring only.  All pipeline logic lives in src/services/.
 All inspector/benchmark logic lives in src/services/workbench_service.py.
 
-Tabs:
-  Generation Pipeline  generate_test_streaming + run_test_streaming
-  Healing Pipeline     heal_test_streaming
-  Vision Pipeline      analyze_visual_streaming + run_vision_test_streaming
-  Artifact Inspector   browse tests/artifacts/ healing decisions
-  Benchmark Explorer   run heuristic classification benchmark (no LLM)
-  Trace Inspector      browse logs/traces.jsonl
+Tab groups (Phase 17 Stage 5 — Information Architecture):
+
+  Tab 1: Overview           — system description, pipeline topology, Recent Runs
+  ─── Pipelines ──────────────────────────────────────────────────────────────
+  Tab 2: Generation         generate_test_streaming + run_test_streaming
+  Tab 3: Healing            heal_test_streaming (IA-4: auto-populates inspector)
+  Tab 4: Vision             analyze_visual_streaming + run_vision_test_streaming
+  ─── Engineering ─────────────────────────────────────────────────────────────
+  Tab 5: Artifact Inspector browse all decision artifacts
+  Tab 6: Evaluation         heuristic + LLM benchmarks, run history
+  Tab 7: Trace Inspector    browse logs/traces.jsonl
+  Tab 8: Models             registered model capabilities
 """
 
 import logging
@@ -43,9 +48,12 @@ from src.services.vision_service import (
 )
 from src.services.workbench_service import (
     get_model_info,
+    get_system_overview,
     list_artifacts,
     load_artifact,
     load_benchmark_history,
+    load_most_recent_artifact,
+    load_run_history,
     load_traces,
     run_classification_benchmark,
     run_generation_benchmark_ui,
@@ -102,7 +110,26 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
     )
 
     with gr.Tabs():
-        # ── Tab 1: Generation Pipeline ──────────────────────────────────────
+        # ── Tab 1: Overview ─────────────────────────────────────────────────
+        with gr.Tab("Overview"):
+            gr.Markdown(get_system_overview())
+            gr.Markdown("---")
+            with gr.Row():
+                run_history_refresh_btn = gr.Button("Refresh Recent Runs", scale=1)
+                gr.Markdown(
+                    "Cross-pipeline timeline — one row per decision artifact.",
+                    scale=5,
+                )
+            run_history_out = gr.Markdown(
+                "*Click **Refresh Recent Runs** to load the unified run history.*"
+            )
+            run_history_refresh_btn.click(
+                fn=load_run_history,
+                inputs=[],
+                outputs=[run_history_out],
+            )
+
+        # ── Tab 2: Generation Pipeline ──────────────────────────────────────
         with gr.Tab("Generation Pipeline"):
             with gr.Row():
                 with gr.Column(scale=3):
@@ -152,7 +179,7 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[gen_timeline, result_out],
             )
 
-        # ── Tab 2: Healing Pipeline ─────────────────────────────────────────
+        # ── Tab 3: Healing Pipeline ─────────────────────────────────────────
         with gr.Tab("Healing Pipeline"):
             with gr.Row():
                 with gr.Column(scale=3):
@@ -179,7 +206,9 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                     with gr.Tabs():
                         with gr.Tab("Decision Report"):
                             h_explanation_out = gr.Markdown(
-                                "### Healing Decision\n*No run active.*",
+                                "### Healing Decision\n*No run active.*\n\n"
+                                "*After a run, this report is also available in the "
+                                "**Artifact Inspector** tab with the same content.*",
                                 elem_classes=["tall-md"],
                             )
                         with gr.Tab("Execution Logs"):
@@ -193,18 +222,7 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                             with gr.Accordion("HealingDecision JSON", open=False):
                                 h_decision_out = gr.JSON(label="Raw artifact")
 
-            h_btn.click(
-                fn=heal_test_streaming,
-                inputs=[h_file_in, h_max_retries_in],
-                outputs=[
-                    h_result_out,
-                    h_explanation_out,
-                    h_timeline_out,
-                    h_decision_out,
-                ],
-            )
-
-        # ── Tab 3: Vision Pipeline ──────────────────────────────────────────
+        # ── Tab 4: Vision Pipeline ──────────────────────────────────────────
         with gr.Tab("Vision Pipeline"):
             with gr.Row():
                 with gr.Column(scale=3):
@@ -262,12 +280,14 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[v_timeline, v_result_out],
             )
 
-        # ── Tab 4: Artifact Inspector ───────────────────────────────────────
+        # ── Tab 5: Artifact Inspector ───────────────────────────────────────
         with gr.Tab("Artifact Inspector"):
             gr.Markdown(
                 "Browse decision artifacts written to `tests/artifacts/` by every pipeline run "
                 "(healing, generation, vision). Each artifact carries full provenance: model, "
-                "provider, prompt version, token counts, latency, and trace ID."
+                "provider, prompt version, token counts, latency, and trace ID.\n\n"
+                "After a **Healing Pipeline** run the inspector auto-loads the new artifact "
+                "— no manual Refresh needed."
             )
             with gr.Row():
                 artifact_dropdown = gr.Dropdown(
@@ -299,7 +319,7 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[artifact_md, artifact_json],
             )
 
-        # ── Tab 5: Evaluation ──────────────────────────────────────────────
+        # ── Tab 6: Evaluation ──────────────────────────────────────────────
         with gr.Tab("Evaluation"):
             gr.Markdown(
                 "Run benchmarks and compare results across runs.  "
@@ -373,24 +393,6 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 outputs=[history_out],
             )
 
-        # ── Tab 6: Models ──────────────────────────────────────────────────
-        with gr.Tab("Models"):
-            gr.Markdown(
-                "Active models read from environment variables "
-                "(`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, "
-                "`OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`).  "
-                "Shows capability metadata registered in `ModelRegistry`."
-            )
-            with gr.Row():
-                models_refresh_btn = gr.Button("Refresh", variant="primary")
-            models_out = gr.Markdown("*Click Refresh to load model registry.*")
-
-            models_refresh_btn.click(
-                fn=get_model_info,
-                inputs=[],
-                outputs=[models_out],
-            )
-
         # ── Tab 7: Trace Inspector ──────────────────────────────────────────
         with gr.Tab("Trace Inspector"):
             gr.Markdown(
@@ -413,6 +415,46 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
                 inputs=[],
                 outputs=[trace_out, trace_summary],
             )
+
+        # ── Tab 8: Models ──────────────────────────────────────────────────
+        with gr.Tab("Models"):
+            gr.Markdown(
+                "Active models read from environment variables "
+                "(`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, "
+                "`OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`).  "
+                "Shows capability metadata registered in `ModelRegistry`."
+            )
+            with gr.Row():
+                models_refresh_btn = gr.Button("Refresh", variant="primary")
+            models_out = gr.Markdown("*Click Refresh to load model registry.*")
+
+            models_refresh_btn.click(
+                fn=get_model_info,
+                inputs=[],
+                outputs=[models_out],
+            )
+
+    # ── IA-4: Healing run auto-populates Artifact Inspector ─────────────────
+    # Wire healing button *after* all tab components are defined so that
+    # artifact_dropdown, artifact_md, and artifact_json are in scope.
+    h_btn.click(
+        fn=heal_test_streaming,
+        inputs=[h_file_in, h_max_retries_in],
+        outputs=[
+            h_result_out,
+            h_explanation_out,
+            h_timeline_out,
+            h_decision_out,
+        ],
+    ).then(
+        fn=refresh_artifacts,
+        inputs=[],
+        outputs=[artifact_dropdown],
+    ).then(
+        fn=load_most_recent_artifact,
+        inputs=[],
+        outputs=[artifact_md, artifact_json],
+    )
 
 if __name__ == "__main__":
     demo.launch(theme=gr.themes.Default(), css=css)

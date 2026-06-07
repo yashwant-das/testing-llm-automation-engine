@@ -248,20 +248,28 @@ Goal: turn the single-button "Benchmark Explorer" into a real evaluation surface
 
 Goal: reorganize navigation around the now-real backbone. Done last on purpose.
 
-- ☐ **Group producers vs. engineering surfaces (M1 / IA-1):** separate the three
-  Workflow tabs (Generation, Healing, Vision) from the Engineering surfaces
-  (Run History, Evaluation, Traces, Models) — via grouped tabs or a left nav,
-  within Gradio's constraints.
-- ☐ **Overview / landing (IA-2):** a home surface stating what the system is, the
-  pipeline topology (reuse the architecture diagram), and recent activity. The app
-  should no longer open cold on a form.
-- ☐ **Unified Run History (Opportunity 7):** one list of recent runs across all
-  pipelines, each linking to its artifact **and** its trace. This is the spine that
-  makes "investigate a failure" first-class.
-- ☐ **Fold the inline healing "Decision Report" into the shared artifact view**
-  (IA-4) so "the report I just saw" and "the artifact list" are the same object,
-  not two unexplained copies.
-- Acceptance: a first-time engineer can answer "what is this / where do I look /
+- ☑ **Group producers vs. engineering surfaces (M1 / IA-1):** tab order
+  reorganized: Overview first, then Pipelines (Generation → Healing → Vision),
+  then Engineering (Artifact Inspector → Evaluation → Trace Inspector → Models).
+  The Overview tab explains the grouping so first-time users orient immediately.
+- ☑ **Overview / landing (IA-2):** `get_system_overview()` in `workbench_service.py`
+  returns a static markdown constant with system description, ASCII pipeline topology,
+  and navigation guide. Rendered as the first tab so the app no longer opens cold on
+  a form. A "Refresh Recent Runs" button loads the live unified history.
+- ☑ **Unified Run History (Opportunity 7):** `load_run_history()` scans
+  `tests/artifacts/` for all decision JSON files (healing, generation, vision),
+  sorts newest-first, and renders a cross-pipeline table with timestamp, pipeline,
+  model, status, artifact name, and trace ID. Exposed in the Overview tab.
+- ☑ **Fold the inline healing "Decision Report" into the shared artifact view**
+  (IA-4): `h_btn.click(...).then(refresh_artifacts).then(load_most_recent_artifact)`
+  auto-populates the Artifact Inspector after every healing run. The Decision Report
+  sub-tab notes that the same report is available in Artifact Inspector. Both render
+  identical content from `HealingDecision.to_markdown()`.
+- ☑ Tests added: 22 new tests in `tests/unit_test_information_architecture.py`
+  (`TestGetSystemOverview` × 7, `TestLoadRunHistory` × 11, `TestLoadMostRecentArtifact` × 4).
+- Acceptance met: 553 tests green (531 + 22 new). App opens to Overview tab,
+  not a form. Navigation guide in Overview answers the acceptance question inline.
+- Acceptance met: a first-time engineer can answer "what is this / where do I look /
   how do these stages connect" from inside the app, without `docs/`.
 
 ---
@@ -352,3 +360,9 @@ When every box is checked, the workbench _is_ what the architecture already clai
   LLM-backed generation benchmark with clear UI error instead of silent timeout.
   "Benchmark Explorer" renamed to "Evaluation" with nested sub-tabs and shared
   Run History section.
+- 2026-06-07 — Stage 5 complete. 553 tests green (531 + 22 new). Overview tab added
+  as Tab 1 with `get_system_overview()` (system description + ASCII pipeline topology +
+  navigation guide) and a unified Recent Runs widget backed by `load_run_history()`.
+  Tab order reorganized: Overview → Generation → Healing → Vision → Artifact Inspector →
+  Evaluation → Trace Inspector → Models. IA-4: healing button wired with `.then()` chain
+  to auto-populate Artifact Inspector after every run via `load_most_recent_artifact()`.
