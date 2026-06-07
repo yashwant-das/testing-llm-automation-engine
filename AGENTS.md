@@ -168,8 +168,8 @@ Active documentation lives in:
 - `docs/development/` — contributor guides
 - `docs/evaluation/` — benchmark and evaluation methodology
 - `docs/prompts/` — prompt engineering documentation
-- `docs/ENV_VARIABLES.md` — all environment variables with defaults
-- `docs/DOCKER.md` — Docker setup and deployment
+- `docs/env-variables.md` — all environment variables with defaults
+- `docs/docker.md` — Docker setup and deployment
 
 Historical documents (completed plans, pre-decision evaluations) are in `docs/history/`.
 

@@ -262,4 +262,4 @@ Key environment variables for Docker:
 - `GRADIO_SERVER_NAME`: Set to `0.0.0.0` in Dockerfile for container access
 - `PYTHONUNBUFFERED`: Set to `1` for real-time log output
 
-See [ENV_VARIABLES.md](ENV_VARIABLES.md) for complete documentation.
+See [env-variables.md](env-variables.md) for complete documentation.

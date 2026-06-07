@@ -247,9 +247,9 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── decisions.md              # Architecture Decision Records
 │   ├── scorecard.md              # Repository maturity scorecard
 │   ├── backlog.md                # Future work and research topics
-│   ├── GOVERNANCE.md             # Documentation governance rules
-│   ├── DOCKER.md                 # Docker setup and deployment
-│   └── ENV_VARIABLES.md          # Environment variable reference
+│   ├── governance.md             # Documentation governance rules
+│   ├── docker.md                 # Docker setup and deployment
+│   └── env-variables.md          # Environment variable reference
 ├── tests/
 │   ├── unit_test_*.py            # 440 unit tests (zero live LLM or browser calls)
 │   ├── fixtures/                 # Broken .spec.ts files for benchmark/repair testing

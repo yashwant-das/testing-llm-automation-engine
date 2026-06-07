@@ -15,8 +15,8 @@
 | Why was X decided? | `docs/decisions.md` (ADRs) |
 | How do I add X? | `docs/development/adding-*.md` |
 | How do I debug X? | `docs/development/debugging.md` |
-| What are the environment variables? | `docs/ENV_VARIABLES.md` |
-| How do I run in Docker? | `docs/DOCKER.md` |
+| What are the environment variables? | `docs/env-variables.md` |
+| How do I run in Docker? | `docs/docker.md` |
 | What is the AI assistant expected to know? | `AGENTS.md` |
 | What's the evaluation methodology? | `docs/evaluation/` |
 | How are prompts managed? | `docs/prompts/` |
@@ -33,12 +33,12 @@
 | Event | Required action |
 | --- | --- |
 | New module added to `src/` | Update `README.md` repo structure; update `AGENTS.md` module map |
-| New environment variable | Update `docs/ENV_VARIABLES.md`; update `docs/development/setup.md` |
-| New LLM provider supported | Update `docs/development/adding-models.md` and `docs/ENV_VARIABLES.md` |
+| New environment variable | Update `docs/env-variables.md`; update `docs/development/setup.md` |
+| New LLM provider supported | Update `docs/development/adding-models.md` and `docs/env-variables.md` |
 | New repair strategy added | Update `docs/development/adding-healing-strategies.md` |
 | Architecture boundary changes | Update relevant `docs/architecture/*.md` |
 | Significant technical decision made | Add an ADR to `docs/decisions.md` |
-| UI tab renamed or added | Update `README.md`, `AGENTS.md`, `docs/DOCKER.md` |
+| UI tab renamed or added | Update `README.md`, `AGENTS.md`, `docs/docker.md` |
 | New benchmark added | Update `docs/evaluation/benchmarks.md` |
 | Prompt file changed significantly | Update `docs/prompts/healing.md` or `generation.md`; bump version in `prompts/manifest.json` |
 | Phase or milestone completed | Update `docs/scorecard.md` with new maturity scores |
