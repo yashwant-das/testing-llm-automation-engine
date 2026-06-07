@@ -102,7 +102,7 @@ def on_artifact_select(name: str) -> tuple[str, dict]:
 # UI
 # ---------------------------------------------------------------------------
 
-with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
+with gr.Blocks(title="AI Engineering Workbench") as demo:
     gr.Markdown("# AI Engineering Workbench")
     gr.Markdown(
         "Reference implementation: structured LLM outputs · "
@@ -116,10 +116,10 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
             gr.Markdown("---")
             with gr.Row():
                 run_history_refresh_btn = gr.Button("Refresh Recent Runs", scale=1)
-                gr.Markdown(
-                    "Cross-pipeline timeline — one row per decision artifact.",
-                    scale=5,
-                )
+                with gr.Column(scale=5):
+                    gr.Markdown(
+                        "Cross-pipeline timeline — one row per decision artifact."
+                    )
             run_history_out = gr.Markdown(
                 "*Click **Refresh Recent Runs** to load the unified run history.*"
             )
@@ -380,9 +380,8 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
             gr.Markdown("---")
             with gr.Row():
                 history_refresh_btn = gr.Button("Refresh History", scale=1)
-                gr.Markdown(
-                    "Run-over-run comparison from `benchmarks/reports/`.", scale=5
-                )
+                with gr.Column(scale=5):
+                    gr.Markdown("Run-over-run comparison from `benchmarks/reports/`.")
             history_out = gr.Markdown(
                 "*Click Refresh History or run a benchmark above.*"
             )
