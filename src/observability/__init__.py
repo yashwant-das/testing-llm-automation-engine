@@ -1,7 +1,7 @@
 """
 Observability package — structured span recording for LLM calls and subprocess invocations.
 
-Phase 8: Zero-dependency JSONL tracer.  All spans written to ``logs/traces.jsonl``
+Zero-dependency JSONL tracer.  All spans written to ``logs/traces.jsonl``
 as newline-delimited JSON, queryable with ``jq``.
 
 Usage (production):

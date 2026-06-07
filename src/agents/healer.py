@@ -1,12 +1,10 @@
 """
 CLI entrypoint for the healing pipeline.
 
-Re-exports all public symbols from src.healing for backwards-compatible
-imports.  The ``if __name__ == "__main__"`` block enables:
+Re-exports the full public API of src.healing so callers do not need to
+know the internal module layout.  The ``__main__`` block enables:
 
-    python -m src.agents.healer tests/generated/broken.spec.ts
-
-New code should import directly from src.healing or its sub-modules.
+    python -m src.agents.healer tests/generated/broken.spec.ts [--max-retries N]
 """
 
 from src.healing import (

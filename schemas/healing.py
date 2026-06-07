@@ -77,7 +77,6 @@ class Evidence(BaseModel):
     error_log: str
     screenshot_path: Optional[str] = None
     dom_snippet: Optional[str] = None
-    # Phase 6: extended context from context collector
     console_errors: List[str] = Field(default_factory=list)
     network_errors: List[str] = Field(default_factory=list)
     accessibility_tree: Optional[str] = None
@@ -143,7 +142,6 @@ class HealingAnalysis(BaseModel):
     failure_summary: str
     hypothesis: str
     confidence_score: float = Field(ge=0.0, le=1.0)
-    # Phase 9: explainability fields (optional — older prompts may not produce them)
     confidence_rationale: str = Field(
         default="",
         description="The LLM's explanation of why this confidence level was assigned.",
@@ -178,7 +176,8 @@ class HealingDecision(BaseModel):
 
     Written to tests/artifacts/ as JSON after every healing session.
     Carries all provenance: test file, evidence, LLM analysis, verification,
-    and (Phase 9) full explainability metadata.
+    and explainability metadata (model used, prompt version, confidence rationale,
+    root cause evidence).
     """
 
     test_file: str
@@ -193,8 +192,8 @@ class HealingDecision(BaseModel):
     verification_log: Optional[str] = None
     timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
 
-    # Phase 9: Explainability fields — all default to empty / 0 so that
-    # existing artifact JSON files remain valid without migration.
+    # Explainability fields — all default to empty / 0 so that
+    # artifact JSON files produced before these fields existed remain valid.
     model_used: str = Field(
         default="",
         description="Model identifier that produced this decision (e.g. 'qwen3-coder-30b').",
@@ -281,8 +280,8 @@ class HealingDecision(BaseModel):
     def to_markdown(self) -> str:
         """Generate a human-readable markdown healing report.
 
-        Phase 9: extended with Provenance and Root Cause Evidence sections so
-        the artifact is self-explaining without needing to open the raw JSON.
+        Includes Provenance and Root Cause Evidence sections so the artifact
+        is self-explaining without needing to open the raw JSON.
         """
         emoji = "✅" if self.verification_passed else "❌"
         fail_type_str = (
@@ -297,7 +296,6 @@ class HealingDecision(BaseModel):
             else "*(no screenshot)*"
         )
 
-        # Provenance block (Phase 9)
         model_str = self.model_used or "*(unknown)*"
         prompt_str = (
             f"`{self.prompt_version}` (hash: `{self.prompt_hash}`)"
@@ -313,13 +311,11 @@ class HealingDecision(BaseModel):
             f"`{self.context_snapshot_id}`" if self.context_snapshot_id else "*(n/a)*"
         )
 
-        # Root cause evidence block (Phase 9)
         if self.root_cause_evidence:
             rce_md = "\n".join(f"- {item}" for item in self.root_cause_evidence)
         else:
             rce_md = "*(none provided)*"
 
-        # Confidence rationale (Phase 9)
         rationale_md = self.confidence_rationale or "*(not provided)*"
 
         return f"""# Healing Report: {self.timestamp}

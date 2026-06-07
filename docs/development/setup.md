@@ -18,7 +18,7 @@
 ## Step 1: Clone and Install
 
 ```bash
-git clone https://github.com/your-org/testing-llm-automation-engine
+git clone https://github.com/yashwant-das/testing-llm-automation-engine
 cd testing-llm-automation-engine
 
 # Python dependencies (creates .venv automatically)

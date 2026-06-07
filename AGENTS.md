@@ -19,9 +19,9 @@ implementation of the patterns described in `docs/ai-systems-engineering.md`.
 ```text
 src/
 ├── app.py                # Gradio UI — 6-tab workbench, wiring only
-├── agents/               # Compatibility shims (do not add new logic here)
-│   ├── generator.py      # Delegates to src/context/ + src/llm/
-│   └── healer.py         # Thin shim → src/healing/ + CLI entrypoint
+├── agents/               # Pipeline entry points and public API
+│   ├── generator.py      # Orchestrates context collection + LLM call → generated test
+│   └── healer.py         # CLI entrypoint + re-exports src/healing public API
 ├── services/             # Service layer — the boundary between UI and pipelines
 │   ├── generation_service.py
 │   ├── healing_service.py

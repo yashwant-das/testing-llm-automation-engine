@@ -62,7 +62,7 @@ class RunResult(BaseModel):
 class LLMConfig(BaseModel):
     """Configuration for a single LLM provider connection.
 
-    Used by the LLM layer (Phase 2). Defined here to avoid circular imports.
+    Defined here (rather than in src/llm/) to avoid circular imports.
     """
 
     provider: str  # "lm_studio" | "ollama" | "openai"

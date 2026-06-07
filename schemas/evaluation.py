@@ -1,7 +1,10 @@
 """
 Pydantic schemas for the evaluation and benchmarking framework.
 
-Phase 7: Defines the data contracts for benchmark runs and evaluation results.
+BenchmarkRunConfig — reproducible configuration record for a single benchmark run.
+EvaluationResult   — pass/fail result for one benchmark example.
+BenchmarkRun       — aggregated results across a full run with computed metrics.
+
 These schemas are shared by generation, healing, and intent-validation runners.
 """
 

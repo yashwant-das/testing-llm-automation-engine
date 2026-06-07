@@ -1,9 +1,13 @@
 """
 Utility for loading LLM prompts from external markdown files.
 
-Phase 9: Added get_prompt_version() to read version strings from
-prompts/manifest.json.  The manifest stores human-set version labels;
-hashes are always computed fresh from file content by get_prompt_hash().
+Public API:
+  load_prompt(agent_name)       — read a prompt file from prompts/
+  get_prompt_version(agent_name) — read the version label from prompts/manifest.json
+  get_prompt_hash(agent_name)    — compute SHA-256 fingerprint of the prompt content
+
+The manifest stores human-set version labels; hashes are always computed fresh
+from file content by get_prompt_hash().
 """
 
 import hashlib

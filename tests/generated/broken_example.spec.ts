@@ -4,13 +4,13 @@ test('Broken Login Example', async ({page}) => {
     // Navigate to the login page
     await page.goto('https://the-internet.herokuapp.com/login');
 
-    // BUG: Incorrect selector for the username field (shoud be '#username')
+    // FAILURE CASE: selector does not exist on the page (correct selector is '#username')
     await page.locator('#user-input-field-wrong').fill('tomsmith');
 
     // Correct password field
     await page.locator('#password').fill('SuperSecretPassword!');
 
-    // BUG: Looking for a button with text "Submit" instead of "Login"
+    // FAILURE CASE: button role name is wrong (correct name is 'Login')
     await page.getByRole('button', {name: 'Submit'}).click();
 
     // Verification

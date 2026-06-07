@@ -132,7 +132,7 @@ def _apply_ast_fix(current_code: str, decision: HealingDecision) -> str:
         return current_code
 
 
-# ── string path (legacy, retained as fallback) ────────────────────────────────
+# ── string path — exact and normalized fallback when all AST strategies miss ──
 
 
 def _apply_string_fix(current_code: str, decision: HealingDecision) -> str:

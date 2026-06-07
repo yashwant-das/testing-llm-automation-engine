@@ -1,8 +1,8 @@
 """
 Workbench service — read-only data access for the AI Engineering Workbench UI.
 
-Phase 10: Three engineering inspector tabs surface data that is already
-produced by the healing pipeline, without adding any new AI behaviour.
+Surfaces data already produced by the healing pipeline: artifacts, traces,
+and benchmark results.  No AI calls are made from this module.
 
 Public API:
     list_artifacts()                -> list[str]     — file paths, newest-first

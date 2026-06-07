@@ -1,12 +1,8 @@
 """
 Pydantic schemas for context snapshots and artifact records.
 
-Phase 6 (Context Collection Modernization): ContextSnapshot is now fully
-implemented via ``src.context.collect_context()``.  The schema itself is
-unchanged from the Phase 1 stub — all fields were already defined correctly.
-
-Phase 8 (Observability): TraceMetadata records per-LLM-call observability data
-(model, tokens, latency, retry_count, prompt hash).
+ContextSnapshot — unified context collected from a browser session before generation or healing.
+TraceMetadata   — per-LLM-call observability record linked to a parent trace session.
 """
 
 from datetime import datetime
@@ -21,8 +17,6 @@ class TraceMetadata(BaseModel):
     Recorded by ``src.observability.Tracer`` after every successful or failed
     LLM call through ``LLMRouter``.  Linked to its parent session via
     ``trace_id``.
-
-    Phase 8 addition.
     """
 
     span_type: str = "llm"
@@ -52,9 +46,9 @@ class ContextSnapshot(BaseModel):
     """
     Unified context snapshot collected before generation or healing.
 
-    Phase 1 stub: only HTML is collected. Phase 6 will expand this with
-    accessibility tree, console errors, network failures, and locator
-    candidates — without changing the interface.
+    Captures DOM HTML, accessibility tree, console errors, network failures,
+    locator candidates, and an optional screenshot path — all collected in a
+    single Playwright session via ``src.context.collect_context()``.
     """
 
     url: str

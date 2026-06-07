@@ -135,7 +135,7 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
 
         raw_content = llm_response.content
 
-        # Pydantic validation — no silent data corruption (Phase 1 core change)
+        # Pydantic validation — no silent data corruption
         analysis = parse_llm_response(raw_content, HealingAnalysis)
 
         # Heuristic override: trust high-confidence heuristic over LLM UNKNOWN

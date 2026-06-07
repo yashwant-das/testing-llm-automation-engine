@@ -154,15 +154,9 @@ best-practice dimensions (no magic waits, no `page.waitForTimeout`, proper asser
 
 ## Cleanup Work
 
-These are known rough edges in the codebase that predate Phase 12.
-They are not user-visible bugs but reduce maintainability.
+Known rough edges that reduce maintainability but have no user-visible impact.
 
-| Item | Status | Notes |
-| --- | --- | --- |
-| `src/models/healing_model.py` | Shim exists | Re-exports from `schemas/healing.py`. Tests still import from here. Remove once all test imports are migrated. |
-| `src/utils/llm.py::extract_json_block()` | Legacy public alias | Tested in `unit_test_json.py`. Remove once test migrated. |
-| `src/utils/llm.py::extract_code_block()` | Legacy public alias | No remaining callers in production. Remove once `unit_test_json.py` is updated. |
-| `src/utils/llm.py::get_client()` / `get_model()` | Deprecated shims | Remove once any remaining callers confirmed gone. |
-| `src/tui/` | Empty directory | Remove. |
-| `src/memory/` | Empty directory | Remove. |
-| Stale "Phase N will delete" comments in `src/utils/llm.py` | Minor | Comments reference completed phases. Update to remove phase references. |
+| Item | Notes |
+| --- | --- |
+| `src/utils/llm.py::extract_json_block()` | Still tested in `unit_test_json.py`. Safe to remove once test is migrated to call `parse_llm_response()` directly. |
+| `src/utils/llm.py::extract_code_block()` | No remaining callers in production. Safe to remove once `unit_test_json.py` is updated. |

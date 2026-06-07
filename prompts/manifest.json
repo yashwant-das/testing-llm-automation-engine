@@ -3,7 +3,7 @@
   "description": "Prompt version registry. Increment 'version' when the prompt content changes. Hash is computed dynamically by get_prompt_hash() — do not hard-code it here.",
   "prompts": {
     "generator": {
-      "version": "1",
+      "version": "2",
       "description": "Playwright test generator — converts URL + user story into a runnable .spec.ts file"
     },
     "healer": {
@@ -11,7 +11,7 @@
       "description": "Test failure healer and analyzer — diagnoses failure type, explains reasoning, proposes code fix"
     },
     "vision": {
-      "version": "1",
+      "version": "2",
       "description": "Visual Playwright test generator — generates tests from screenshots via vision model"
     }
   }
