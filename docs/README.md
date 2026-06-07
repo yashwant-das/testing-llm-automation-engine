@@ -31,7 +31,7 @@ After the overview above, go deeper by subsystem:
 
 ### "I want to understand the current UX state and what needs to change"
 
-1. [`ui-audit.md`](ui-audit.md) — Phase 16 audit of the workbench UI against the post-modernization architecture: strengths, UX debt, visibility/workflow gaps, and prioritized recommendations
+1. [`history/phase-16-ui-audit.md`](history/phase-16-ui-audit.md) — Phase 16 audit of the workbench UI against the post-modernization architecture: strengths, UX debt, visibility/workflow gaps, and prioritized recommendations
 
 ### "I want to set it up and run it"
 
@@ -75,7 +75,7 @@ docs/
 ├── decisions.md               ← ADRs: why things are the way they are
 ├── governance.md              ← rules for keeping docs accurate
 ├── scorecard.md               ← repository maturity scores over time
-├── ui-audit.md                ← Phase 16 audit of the workbench UX
+│   ├── phase-16-ui-audit.md   ← Phase 16 audit of the workbench UX
 ├── backlog.md                 ← unscheduled future work and experiments
 │
 ├── env-variables.md           ← reference: all environment variables

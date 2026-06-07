@@ -1,6 +1,6 @@
 # Phase 17 — AI Engineering Workbench Redesign (Plan)
 
-> Driven directly by [`docs/ui-audit.md`](../docs/ui-audit.md) (Phase 16).
+> Driven directly by [`docs/history/phase-16-ui-audit.md`](../docs/history/phase-16-ui-audit.md) (Phase 16).
 > This document is both the plan and the living execution tracker.
 > Status legend: ☐ not started · ◐ in progress · ☑ done.
 >
@@ -123,7 +123,7 @@ Goal: nothing in the running app or its docs is false. Cheapest, highest-trust.
   `README.md:1`, `docs/ai-systems-engineering.md` (2 occurrences),
   `docs/architecture/overview.md`, `docs/env-variables.md`, `docs/docker.md`.
 - ☑ `grep -r "AI Testing Workbench"` returns nothing outside `docs/history/`
-  and `docs/ui-audit.md` (the audit document itself records the old name as a finding).
+  and `docs/history/phase-16-ui-audit.md` (the audit document itself records the old name as a finding).
 
 ### 1d. Language pass (M3) + low-priority truth items (L1, L3)
 
