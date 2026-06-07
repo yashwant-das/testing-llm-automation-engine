@@ -301,6 +301,10 @@ class TestAnalyzeAndPlan(unittest.TestCase):
         mock_router.complete_primary.return_value = MagicMock(
             content=f"```json\n{response_json}\n```",
             model_used="mock-model",  # Phase 9: planner passes this to HealingDecision
+            provider="mock-provider",  # Stage 2: ProvenanceRecord.provider is str-strict
+            input_tokens=10,
+            output_tokens=20,
+            retry_count=0,
         )
         return mock_router
 

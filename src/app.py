@@ -262,13 +262,13 @@ with gr.Blocks(title="AI Engineering Workbench", css=css) as demo:
         # ── Tab 4: Artifact Inspector ───────────────────────────────────────
         with gr.Tab("Artifact Inspector"):
             gr.Markdown(
-                "Browse healing-decision artifacts written to `tests/artifacts/` "
-                "after each healing session. Renders the full provenance report "
-                "including model, prompt version, confidence rationale, and root-cause evidence."
+                "Browse decision artifacts written to `tests/artifacts/` by every pipeline run "
+                "(healing, generation, vision). Each artifact carries full provenance: model, "
+                "provider, prompt version, token counts, latency, and trace ID."
             )
             with gr.Row():
                 artifact_dropdown = gr.Dropdown(
-                    label="Healing Decision",
+                    label="Decision Artifact",
                     choices=[],
                     value=None,
                     interactive=True,

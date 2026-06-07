@@ -18,7 +18,7 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .artifacts import ContextSnapshot
-from .shared import FailureType
+from .shared import FailureType, ProvenanceRecord
 
 
 class RepairStrategy(str, Enum):
@@ -182,14 +182,13 @@ class HealingAnalysis(BaseModel):
         return list(v) if v else []
 
 
-class HealingDecision(BaseModel):
+class HealingDecision(ProvenanceRecord):
     """
     Full artifact record of a single healing attempt.
 
-    Written to tests/artifacts/ as JSON after every healing session.
-    Carries all provenance: test file, evidence, LLM analysis, verification,
-    and explainability metadata (model used, prompt version, confidence rationale,
-    root cause evidence).
+    Written to tests/artifacts/ as healing_decision_*.json after every session.
+    Inherits provenance fields (model, provider, tokens, latency, trace_id) from
+    ProvenanceRecord and adds healing-specific explainability metadata.
     """
 
     test_file: str
@@ -202,22 +201,6 @@ class HealingDecision(BaseModel):
     action_taken: HealingAction
     verification_passed: bool = False
     verification_log: Optional[str] = None
-    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
-
-    # Explainability fields — all default to empty / 0 so that
-    # artifact JSON files produced before these fields existed remain valid.
-    model_used: str = Field(
-        default="",
-        description="Model identifier that produced this decision (e.g. 'qwen3-coder-30b').",
-    )
-    prompt_version: str = Field(
-        default="",
-        description="Human-set version label from prompts/manifest.json (e.g. '2').",
-    )
-    prompt_hash: str = Field(
-        default="",
-        description="SHA-256 hex prefix of the healer prompt content at run time.",
-    )
     confidence_rationale: str = Field(
         default="",
         description="LLM's explanation of why this confidence level was assigned.",
@@ -226,14 +209,13 @@ class HealingDecision(BaseModel):
         default_factory=list,
         description="Specific evidence items from logs/DOM that support the diagnosis.",
     )
+    # Backward-compat alias for latency_ms.  Existing artifact JSON files and tests
+    # written before Stage 2 reference this field name.  New callers should pass
+    # latency_ms instead; from_analysis() accepts both and keeps them in sync.
     execution_duration_ms: int = Field(
         default=0,
         ge=0,
-        description="Wall-clock time for the full analyze_and_plan() call in milliseconds.",
-    )
-    context_snapshot_id: str = Field(
-        default="",
-        description="Short hash identifying the evidence error_log used for this decision.",
+        description="Deprecated alias for latency_ms. Preserved for backward compat.",
     )
 
     model_config = ConfigDict(use_enum_values=False)
@@ -246,9 +228,15 @@ class HealingDecision(BaseModel):
         analysis: HealingAnalysis,
         evidence: Evidence,
         model_used: str = "",
+        provider: str = "",
         prompt_version: str = "",
         prompt_hash: str = "",
+        input_tokens: int = 0,
+        output_tokens: int = 0,
+        latency_ms: int = 0,
         execution_duration_ms: int = 0,
+        retry_count: int = 0,
+        trace_id: str = "",
         context_snapshot_id: str = "",
     ) -> "HealingDecision":
         """Construct a HealingDecision from a validated HealingAnalysis + evidence.
@@ -258,11 +246,20 @@ class HealingDecision(BaseModel):
             analysis:             Validated :class:`HealingAnalysis` from the LLM.
             evidence:             Evidence collected from the failure run.
             model_used:           Model identifier from :class:`~src.llm.router.LLMResponse`.
+            provider:             LLM provider name from LLMResponse.
             prompt_version:       Version string from ``prompts/manifest.json``.
             prompt_hash:          SHA-256 hex prefix of the healer prompt.
-            execution_duration_ms: Wall-clock time for the full planning call.
+            input_tokens:         Prompt token count from LLMResponse.
+            output_tokens:        Completion token count from LLMResponse.
+            latency_ms:           Wall-clock time for the full planning call (canonical).
+            execution_duration_ms: Legacy alias for latency_ms; accepted for backward compat.
+            retry_count:          Retry attempts before a successful response.
+            trace_id:             Active tracer session ID (links to traces.jsonl).
             context_snapshot_id:  Short hash of the evidence error_log.
         """
+        # execution_duration_ms is the pre-Stage-2 name for latency_ms.
+        # If the caller passes the old name, use it; the new name takes precedence.
+        effective_latency = latency_ms or execution_duration_ms
         return cls(
             test_file=test_file,
             failure_type=analysis.failure_type,
@@ -275,9 +272,15 @@ class HealingDecision(BaseModel):
             root_cause_evidence=analysis.root_cause_evidence,
             action_taken=analysis.action_taken,
             model_used=model_used,
+            provider=provider,
             prompt_version=prompt_version,
             prompt_hash=prompt_hash,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            latency_ms=effective_latency,
             execution_duration_ms=execution_duration_ms,
+            retry_count=retry_count,
+            trace_id=trace_id,
             context_snapshot_id=context_snapshot_id,
         )
 
@@ -308,17 +311,26 @@ class HealingDecision(BaseModel):
             else "*(no screenshot)*"
         )
 
-        model_str = self.model_used or "*(unknown)*"
+        model_str = (
+            f"{self.model_used} ({self.provider})"
+            if self.model_used and self.provider
+            else self.model_used or "*(unknown)*"
+        )
         prompt_str = (
             f"`{self.prompt_version}` (hash: `{self.prompt_hash}`)"
             if self.prompt_version or self.prompt_hash
             else "*(unknown)*"
         )
+        effective_latency = self.latency_ms or self.execution_duration_ms
         duration_str = (
-            f"{self.execution_duration_ms} ms"
-            if self.execution_duration_ms
+            f"{effective_latency} ms" if effective_latency else "*(not recorded)*"
+        )
+        tokens_str = (
+            f"{self.input_tokens:,} in / {self.output_tokens:,} out"
+            if self.input_tokens or self.output_tokens
             else "*(not recorded)*"
         )
+        trace_str = f"`{self.trace_id}`" if self.trace_id else "*(n/a)*"
         snapshot_str = (
             f"`{self.context_snapshot_id}`" if self.context_snapshot_id else "*(n/a)*"
         )
@@ -374,7 +386,9 @@ class HealingDecision(BaseModel):
 
 - **Model:** {model_str}
 - **Prompt Version:** {prompt_str}
-- **Execution Time:** {duration_str}
+- **Latency:** {duration_str}
+- **Tokens:** {tokens_str}
+- **Trace:** {trace_str}
 - **Context Snapshot:** {snapshot_str}
 """
 

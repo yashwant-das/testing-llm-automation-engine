@@ -34,12 +34,16 @@ def generate_test_streaming(url: str, story: str) -> Iterator[tuple[str, str]]:
         final yield when generation succeeds.
     """
     from src.agents.generator import generate_test_script
+    from src.healing.artifact_store import emit_decision
+    from src.observability import get_tracer
     from src.utils.validation import (
         ValidationError,
         validate_and_sanitize_url,
         validate_description,
     )
 
+    tracer = get_tracer()
+    trace_id = tracer.start_session("generation")
     timeline = "### Generation Timeline\n\n"
 
     # --- Validate ---
@@ -50,9 +54,11 @@ def generate_test_streaming(url: str, story: str) -> Iterator[tuple[str, str]]:
         validated_url = validate_and_sanitize_url(url)
         validated_story = validate_description(story)
     except ValidationError as exc:
+        tracer.end_session(trace_id, success=False)
         yield timeline + f"❌ Validation error: {exc}", f"Validation Error: {exc}"
         return
     except Exception as exc:
+        tracer.end_session(trace_id, success=False)
         yield timeline + f"❌ Error: {exc}", f"Error: {exc}"
         return
 
@@ -63,14 +69,22 @@ def generate_test_streaming(url: str, story: str) -> Iterator[tuple[str, str]]:
     timeline += "→ LLM call: generating test structure and selectors...\n\n"
     yield timeline, ""
 
-    code = generate_test_script(validated_url, validated_story)
-
-    if not code or code.startswith(("Error", "LLM Error")):
-        yield timeline + f"❌ Generation error: {code}", code
+    try:
+        decision = generate_test_script(validated_url, validated_story)
+    except Exception as exc:
+        tracer.end_session(trace_id, success=False)
+        yield timeline + f"❌ Generation error: {exc}", f"Error: {exc}"
         return
 
-    timeline += "✅ Generation complete\n\n"
-    yield timeline, code
+    decision.trace_id = trace_id
+    emit_decision(decision, "generation_decision")
+    tracer.end_session(trace_id, success=True)
+
+    timeline += (
+        f"✅ Generation complete — {decision.line_count} lines"
+        f" · model={decision.model_used}\n\n"
+    )
+    yield timeline, decision.code
 
 
 def run_test_streaming(url: str, code: str, story: str) -> Iterator[tuple[str, str]]:

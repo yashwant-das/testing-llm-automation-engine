@@ -34,10 +34,10 @@ _DATASET_PATH = (
 
 
 def list_artifacts() -> list[str]:
-    """Return absolute paths to all healing-decision artifacts, newest-first.
+    """Return absolute paths to all decision artifacts (healing + generation + vision), newest-first.
 
-    Only ``healing_decision_*.json`` files are included; execution timelines
-    and other artifact types are excluded.
+    Excludes ``execution_timeline_*.json`` files — those are supplementary to
+    healing decisions and are not browsable on their own.
 
     Returns:
         List of absolute path strings (may be empty if the directory is absent).
@@ -45,7 +45,11 @@ def list_artifacts() -> list[str]:
     if not _ARTIFACTS_DIR.exists():
         return []
     files = sorted(
-        _ARTIFACTS_DIR.glob("healing_decision_*.json"),
+        [
+            *_ARTIFACTS_DIR.glob("healing_decision_*.json"),
+            *_ARTIFACTS_DIR.glob("generation_decision_*.json"),
+            *_ARTIFACTS_DIR.glob("vision_decision_*.json"),
+        ],
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )
@@ -53,19 +57,20 @@ def list_artifacts() -> list[str]:
 
 
 def load_artifact(artifact_path: str) -> tuple[str, dict]:
-    """Parse a healing-decision artifact and return a human-readable view.
+    """Parse a decision artifact and return a human-readable view.
+
+    Dispatches to the correct schema based on the filename prefix:
+      ``healing_decision_*``    → HealingDecision
+      ``generation_decision_*`` → GenerationDecision
+      ``vision_decision_*``     → VisionDecision
 
     Args:
-        artifact_path: Absolute or relative path to a ``healing_decision_*.json``
-                       file.
+        artifact_path: Absolute or relative path to a ``*_decision_*.json`` file.
 
     Returns:
-        ``(markdown_report, raw_dict)`` — the markdown comes from
-        :meth:`~schemas.healing.HealingDecision.to_markdown`; the dict is the
-        raw JSON-parsed content for the JSON panel.
+        ``(markdown_report, raw_dict)`` — markdown from the decision's
+        ``to_markdown()``; raw_dict is the JSON-parsed content for the JSON panel.
     """
-    from schemas.healing import HealingDecision
-
     path = Path(artifact_path)
     if not path.exists():
         return f"*File not found: `{artifact_path}`*", {}
@@ -75,13 +80,25 @@ def load_artifact(artifact_path: str) -> tuple[str, dict]:
     except Exception as exc:
         return f"*Could not read file: {exc}*", {}
 
+    name = path.name
     try:
-        decision = HealingDecision.model_validate(raw)
-        md = decision.to_markdown()
+        if name.startswith("generation_decision_"):
+            from schemas.generation import GenerationDecision
+
+            md = GenerationDecision.model_validate(raw).to_markdown()
+        elif name.startswith("vision_decision_"):
+            from schemas.generation import VisionDecision
+
+            md = VisionDecision.model_validate(raw).to_markdown()
+        else:
+            # healing_decision_* and any unknown prefix
+            from schemas.healing import HealingDecision
+
+            md = HealingDecision.model_validate(raw).to_markdown()
     except Exception as exc:
-        logger.warning("Could not parse %s as HealingDecision: %s", path.name, exc)
+        logger.warning("Could not parse %s: %s", path.name, exc)
         md = (
-            f"*Could not parse as HealingDecision: {exc}*\n\n"
+            f"*Could not parse `{path.name}`: {exc}*\n\n"
             f"```json\n{json.dumps(raw, indent=2)[:2000]}\n```"
         )
 

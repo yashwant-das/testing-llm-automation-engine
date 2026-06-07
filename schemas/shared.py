@@ -1,14 +1,15 @@
 """
 Shared types used across all schema modules.
 
-This module provides the FailureType enum and RunResult model,
-which are consumed by healing, generation, and evaluation schemas.
+This module provides the FailureType enum, RunResult model, and
+ProvenanceRecord base model consumed by healing, generation, and evaluation schemas.
 """
 
+from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class FailureType(str, Enum):
@@ -72,3 +73,49 @@ class LLMConfig(BaseModel):
     vision_model: Optional[str] = None
     temperature: float = 0.1
     seed: Optional[int] = None
+
+
+class ProvenanceRecord(BaseModel):
+    """Common provenance fields shared by all pipeline decision artifacts.
+
+    Every decision — healing, generation, vision — embeds these fields so the
+    Artifact Inspector can display uniform provenance across all pipeline types
+    and each artifact can deep-link to its trace span.
+    """
+
+    model_used: str = Field(
+        default="",
+        description="Model identifier that produced this decision (e.g. 'qwen3-30b').",
+    )
+    provider: str = Field(
+        default="",
+        description="LLM provider name (e.g. 'lm_studio', 'ollama').",
+    )
+    prompt_version: str = Field(
+        default="",
+        description="Human-set version label from prompts/manifest.json.",
+    )
+    prompt_hash: str = Field(
+        default="",
+        description="SHA-256 hex prefix of the prompt content at run time.",
+    )
+    input_tokens: int = Field(default=0, ge=0, description="Prompt token count.")
+    output_tokens: int = Field(default=0, ge=0, description="Completion token count.")
+    latency_ms: int = Field(
+        default=0, ge=0, description="Wall-clock LLM call latency in milliseconds."
+    )
+    retry_count: int = Field(
+        default=0, ge=0, description="Retry attempts before success."
+    )
+    trace_id: str = Field(
+        default="",
+        description="Tracer session ID — links this artifact to logs/traces.jsonl.",
+    )
+    context_snapshot_id: str = Field(
+        default="",
+        description="Short hash identifying the context snapshot for this decision.",
+    )
+    timestamp: str = Field(
+        default_factory=lambda: datetime.now().isoformat(),
+        description="ISO-8601 timestamp of when the decision was produced.",
+    )

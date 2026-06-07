@@ -147,27 +147,37 @@ Goal: nothing in the running app or its docs is false. Cheapest, highest-trust.
 Goal: every run, not just healing, produces a uniform, provenance-bearing artifact.
 This is the foundation Stages 3–5 surface.
 
-- ☐ Introduce a **shared provenance contract** (mixin or base model in
-  [`schemas/`](../schemas/)): `model_used`, `provider`, `prompt_version`,
-  `prompt_hash`, `input_tokens`, `output_tokens`, `latency_ms`, `retry_count`,
-  `trace_id`, `context_snapshot_id`, `timestamp`. `HealingDecision` already has
-  most of these — refactor it to consume the shared contract (no behavior change).
-- ☐ **GenerationDecision** (H2): wrap `GenerationResult.code`
-  ([`schemas/generation.py`](../schemas/generation.py)) with the provenance
-  contract + the `ContextSnapshot` used + a `to_markdown()` mirroring
-  `HealingDecision`'s structure. Generation service emits it to
-  `tests/artifacts/` and starts/ends a tracer session.
-- ☐ **VisionDecision** (H2): same shape, plus `screenshot_path`. Vision service
-  emits + traces.
-- ☐ Generalize [`artifact_store`](../src/healing/artifact_store.py) +
-  [`list_artifacts`](../src/services/workbench_service.py) to write/list **all**
-  decision types (heal / generation / vision), not just `healing_decision_*`.
-- ☐ Store `trace_id` on every artifact so an artifact can deep-link to its trace
-  (realizes the "investigate end-to-end" workflow, audit Workflow Gap 1).
-- Acceptance: running generation or vision writes a browsable artifact carrying
-  which model/prompt/tokens/context produced it; unit tests cover each new
-  `to_markdown()` and the round-trip load. Generation output becomes auditable
-  (closes audit Trust point 4 and Workflow Gap 6).
+- ☑ Introduce a **shared provenance contract** in
+  [`schemas/shared.py`](../schemas/shared.py): `ProvenanceRecord` base model with
+  `model_used`, `provider`, `prompt_version`, `prompt_hash`, `input_tokens`,
+  `output_tokens`, `latency_ms`, `retry_count`, `trace_id`, `context_snapshot_id`,
+  `timestamp`. `HealingDecision` refactored to inherit from it (backward-compat
+  `execution_duration_ms` alias preserved as a real field that syncs to `latency_ms`
+  via `from_analysis()`).
+- ☑ **GenerationDecision** (H2): added to [`schemas/generation.py`](../schemas/generation.py)
+  — wraps generated code with the provenance contract + the `ContextSnapshot` used +
+  a `to_markdown()` mirroring `HealingDecision`'s structure.
+  [`src/agents/generator.py`](../src/agents/generator.py) now returns
+  `GenerationDecision` instead of a raw string. Generation service emits the artifact
+  to `tests/artifacts/` and manages tracer session start/end.
+- ☑ **VisionDecision** (H2): added to [`schemas/generation.py`](../schemas/generation.py)
+  — same provenance shape plus `screenshot_path`. Vision service emits + traces.
+- ☑ Generalized [`artifact_store.emit_decision()`](../src/healing/artifact_store.py)
+  and [`workbench_service.list_artifacts()`](../src/services/workbench_service.py) /
+  `load_artifact()` to write/list/parse **all** decision types
+  (healing / generation / vision).
+- ☑ `trace_id` stored on every artifact (generation service assigns it via
+  `decision.trace_id = trace_id` before emitting; vision and healing do likewise).
+- ☑ Artifact Inspector description and dropdown label updated to reflect all three
+  artifact types.
+- ☑ Tests added: 40 new tests in [`tests/unit_test_provenance.py`](../tests/unit_test_provenance.py)
+  covering `GenerationDecision.to_markdown()` and round-trip,
+  `VisionDecision.to_markdown()` and round-trip, `emit_decision()` file prefix/content,
+  `list_artifacts()` multi-type enumeration and exclusions. All 17 pre-existing
+  explainability and planner tests fixed for the renamed/added fields.
+- Acceptance met: 484 tests green. Running generation or vision writes a browsable
+  artifact with full provenance (model / prompt / tokens / latency / trace). The
+  Artifact Inspector now lists all three pipeline types.
 
 ---
 
@@ -303,3 +313,11 @@ When every box is checked, the workbench _is_ what the architecture already clai
   `configure_tracer()` active in app + CLI. `REPAIR_STRATEGY_LABELS` added.
   Product name unified to "AI Engineering Workbench". Timeline language
   rewritten to engineering state across all three services.
+- 2026-06-07 — Stage 2 complete. 484 tests green (444 + 40 new). `ProvenanceRecord`
+  base model introduced in `schemas/shared.py`. `HealingDecision` refactored to
+  inherit from it with backward-compat `execution_duration_ms` alias.
+  `GenerationDecision` + `VisionDecision` added with full provenance + `to_markdown()`.
+  Generator agent now returns `GenerationDecision` instead of raw string.
+  `emit_decision()` generalizes artifact writes across all pipeline types.
+  `list_artifacts()` and `load_artifact()` dispatch across all three artifact types.
+  Tracer sessions and `trace_id` wired in generation and vision services.

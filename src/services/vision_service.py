@@ -34,17 +34,21 @@ def analyze_visual_streaming(
     Yields:
         (timeline_markdown, screenshot_path_or_None, code_or_empty)
     """
-    from schemas.generation import GenerationResult
+    from schemas.generation import GenerationResult, VisionDecision
     from src.context.screenshot import capture_screenshot
+    from src.healing.artifact_store import emit_decision
     from src.llm import get_default_router
+    from src.observability import get_tracer
     from src.utils.llm import extract_code_block
-    from src.utils.prompt_loader import load_prompt
+    from src.utils.prompt_loader import get_prompt_hash, get_prompt_version, load_prompt
     from src.utils.validation import (
         ValidationError,
         validate_and_sanitize_url,
         validate_description,
     )
 
+    tracer = get_tracer()
+    trace_id = tracer.start_session("vision")
     timeline = "### Vision Timeline\n\n"
 
     # --- Validate ---
@@ -55,6 +59,7 @@ def analyze_visual_streaming(
         validated_url = validate_and_sanitize_url(url)
         validated_instruction = validate_description(instruction)
     except ValidationError as exc:
+        tracer.end_session(trace_id, success=False)
         yield (
             timeline + f"❌ Validation error: {exc}",
             None,
@@ -62,6 +67,7 @@ def analyze_visual_streaming(
         )
         return
     except Exception as exc:
+        tracer.end_session(trace_id, success=False)
         yield timeline + f"❌ Error: {exc}", None, f"Error: {exc}"
         return
 
@@ -80,6 +86,7 @@ def analyze_visual_streaming(
             wait_ms=2000,
         )
     except Exception as exc:
+        tracer.end_session(trace_id, success=False)
         yield (
             timeline + f"❌ Screenshot error: {exc}",
             None,
@@ -88,6 +95,7 @@ def analyze_visual_streaming(
         return
 
     if not os.path.exists(screenshot_path):
+        tracer.end_session(trace_id, success=False)
         yield (
             timeline + "❌ Screenshot not created",
             None,
@@ -104,6 +112,7 @@ def analyze_visual_streaming(
         with open(screenshot_path, "rb") as f:
             base64_image = base64.b64encode(f.read()).decode("utf-8")
     except Exception as exc:
+        tracer.end_session(trace_id, success=False)
         yield (
             timeline + f"❌ Encoding error: {exc}",
             screenshot_path,
@@ -116,6 +125,8 @@ def analyze_visual_streaming(
     yield timeline, screenshot_path, ""
 
     try:
+        prompt_version = get_prompt_version("vision")
+        prompt_hash = get_prompt_hash("vision")
         system_instruction = load_prompt("vision")
         router = get_default_router()
         llm_response = router.complete_vision(
@@ -142,6 +153,7 @@ def analyze_visual_streaming(
         )
 
         if not llm_response.content:
+            tracer.end_session(trace_id, success=False)
             yield (
                 timeline + "❌ LLM error: vision model returned empty response",
                 screenshot_path,
@@ -153,6 +165,7 @@ def analyze_visual_streaming(
         try:
             result = GenerationResult(code=extracted)
         except ValueError as exc:
+            tracer.end_session(trace_id, success=False)
             yield (
                 timeline + f"❌ Code extraction error: {exc}",
                 screenshot_path,
@@ -161,6 +174,7 @@ def analyze_visual_streaming(
             return
 
     except Exception as exc:
+        tracer.end_session(trace_id, success=False)
         yield (
             timeline + f"❌ LLM error: {exc}",
             screenshot_path,
@@ -168,7 +182,29 @@ def analyze_visual_streaming(
         )
         return
 
-    timeline += "✅ Generation complete\n\n"
+    vision_decision = VisionDecision(
+        url=validated_url,
+        instruction=validated_instruction,
+        code=result.code,
+        line_count=result.line_count,
+        screenshot_path=screenshot_path,
+        model_used=llm_response.model_used,
+        provider=llm_response.provider,
+        prompt_version=prompt_version,
+        prompt_hash=prompt_hash,
+        input_tokens=llm_response.input_tokens,
+        output_tokens=llm_response.output_tokens,
+        latency_ms=llm_response.latency_ms,
+        retry_count=llm_response.retry_count,
+        trace_id=trace_id,
+    )
+    emit_decision(vision_decision, "vision_decision")
+    tracer.end_session(trace_id, success=True)
+
+    timeline += (
+        f"✅ Generation complete — {result.line_count} lines"
+        f" · model={llm_response.model_used}\n\n"
+    )
     yield timeline, screenshot_path, result.code
 
 

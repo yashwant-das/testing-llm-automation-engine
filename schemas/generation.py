@@ -1,12 +1,17 @@
 """
-Pydantic schemas for the test generation pipeline.
+Pydantic schemas for the test generation and vision pipelines.
 
-GenerationResult wraps the TypeScript code extracted from an LLM response,
-adding validation that ensures the code is non-empty and structurally sane
-before it is written to disk or executed.
+GenerationResult   — validates raw LLM code output before writing to disk.
+GenerationDecision — full provenance artifact for a generation run (to tests/artifacts/).
+VisionDecision     — full provenance artifact for a vision run (to tests/artifacts/).
 """
 
+from typing import Optional
+
 from pydantic import BaseModel, Field, field_validator
+
+from .artifacts import ContextSnapshot
+from .shared import ProvenanceRecord
 
 
 class GenerationResult(BaseModel):
@@ -42,3 +47,162 @@ class GenerationResult(BaseModel):
     def line_count(self) -> int:
         """Number of lines in the generated code."""
         return len(self.code.splitlines())
+
+
+class GenerationDecision(ProvenanceRecord):
+    """Full provenance artifact for a test generation run.
+
+    Written to tests/artifacts/ as generation_decision_*.json after each run.
+    Mirrors HealingDecision's provenance contract so both appear uniformly in
+    the Artifact Inspector.
+    """
+
+    pipeline: str = "generation"
+    url: str
+    story: str
+    code: str
+    line_count: int = Field(default=0, ge=0)
+    context_snapshot: Optional[ContextSnapshot] = None
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict."""
+        return self.model_dump(mode="json")
+
+    def to_json(self) -> str:
+        """Serialize to a JSON string."""
+        return self.model_dump_json(indent=2)
+
+    def to_markdown(self) -> str:
+        """Generate a human-readable markdown report for the Artifact Inspector."""
+        model_str = (
+            f"{self.model_used} ({self.provider})"
+            if self.model_used and self.provider
+            else self.model_used or "*(unknown)*"
+        )
+        prompt_str = (
+            f"`{self.prompt_version}` (hash: `{self.prompt_hash}`)"
+            if self.prompt_version or self.prompt_hash
+            else "*(unknown)*"
+        )
+        duration_str = (
+            f"{self.latency_ms} ms" if self.latency_ms else "*(not recorded)*"
+        )
+        tokens_str = (
+            f"{self.input_tokens:,} in / {self.output_tokens:,} out"
+            if self.input_tokens or self.output_tokens
+            else "*(not recorded)*"
+        )
+        trace_str = f"`{self.trace_id}`" if self.trace_id else "*(n/a)*"
+        snapshot_str = (
+            f"`{self.context_snapshot_id}`" if self.context_snapshot_id else "*(n/a)*"
+        )
+        ctx_nodes = "*(not captured)*"
+        if self.context_snapshot:
+            locator_count = len(self.context_snapshot.locator_candidates)
+            console_count = len(self.context_snapshot.console_errors)
+            ctx_nodes = (
+                f"{locator_count} locator candidates, {console_count} console errors"
+            )
+
+        return f"""# Generation Report: {self.timestamp}
+
+**URL:** `{self.url}`
+**Scenario:** {self.story}
+
+## Generated Test
+
+```typescript
+{self.code}
+```
+
+*{self.line_count} lines*
+
+## Context
+
+- **DOM / a11y snapshot:** {ctx_nodes}
+- **Context Snapshot ID:** {snapshot_str}
+
+## Provenance
+
+- **Model:** {model_str}
+- **Prompt Version:** {prompt_str}
+- **Latency:** {duration_str}
+- **Tokens:** {tokens_str}
+- **Trace:** {trace_str}
+"""
+
+
+class VisionDecision(ProvenanceRecord):
+    """Full provenance artifact for a vision generation run.
+
+    Written to tests/artifacts/ as vision_decision_*.json after each run.
+    Includes the screenshot path so the artifact links to the visual input.
+    """
+
+    pipeline: str = "vision"
+    url: str
+    instruction: str
+    code: str
+    line_count: int = Field(default=0, ge=0)
+    screenshot_path: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        """Return a JSON-serializable dict."""
+        return self.model_dump(mode="json")
+
+    def to_json(self) -> str:
+        """Serialize to a JSON string."""
+        return self.model_dump_json(indent=2)
+
+    def to_markdown(self) -> str:
+        """Generate a human-readable markdown report for the Artifact Inspector."""
+        model_str = (
+            f"{self.model_used} ({self.provider})"
+            if self.model_used and self.provider
+            else self.model_used or "*(unknown)*"
+        )
+        prompt_str = (
+            f"`{self.prompt_version}` (hash: `{self.prompt_hash}`)"
+            if self.prompt_version or self.prompt_hash
+            else "*(unknown)*"
+        )
+        duration_str = (
+            f"{self.latency_ms} ms" if self.latency_ms else "*(not recorded)*"
+        )
+        tokens_str = (
+            f"{self.input_tokens:,} in / {self.output_tokens:,} out"
+            if self.input_tokens or self.output_tokens
+            else "*(not recorded)*"
+        )
+        trace_str = f"`{self.trace_id}`" if self.trace_id else "*(n/a)*"
+        screenshot_md = (
+            f"![Screenshot]({self.screenshot_path})"
+            if self.screenshot_path
+            else "*(not captured)*"
+        )
+
+        return f"""# Vision Report: {self.timestamp}
+
+**URL:** `{self.url}`
+**Instruction:** {self.instruction}
+
+## Screenshot
+
+{screenshot_md}
+
+## Generated Test
+
+```typescript
+{self.code}
+```
+
+*{self.line_count} lines*
+
+## Provenance
+
+- **Model:** {model_str}
+- **Prompt Version:** {prompt_str}
+- **Latency:** {duration_str}
+- **Tokens:** {tokens_str}
+- **Trace:** {trace_str}
+"""

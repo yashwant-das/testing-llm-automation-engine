@@ -148,9 +148,13 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
             analysis=analysis,
             evidence=evidence,
             model_used=llm_response.model_used,
+            provider=llm_response.provider,
             prompt_version=_prompt_version,
             prompt_hash=_prompt_hash,
-            execution_duration_ms=duration_ms,
+            input_tokens=llm_response.input_tokens,
+            output_tokens=llm_response.output_tokens,
+            latency_ms=duration_ms,
+            retry_count=llm_response.retry_count,
             context_snapshot_id=_snapshot_id,
         )
 
@@ -170,6 +174,6 @@ def analyze_and_plan(test_file, code: str, evidence: Evidence) -> HealingDecisio
             ),
             prompt_version=_prompt_version,
             prompt_hash=_prompt_hash,
-            execution_duration_ms=duration_ms,
+            latency_ms=duration_ms,
             context_snapshot_id=_snapshot_id,
         )
