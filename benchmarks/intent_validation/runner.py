@@ -22,9 +22,9 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import List, Optional
+from typing import List
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from schemas.evaluation import BenchmarkRun, BenchmarkRunConfig, EvaluationResult
 

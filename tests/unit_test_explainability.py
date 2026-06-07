@@ -12,7 +12,6 @@ Covers:
 
 import hashlib
 import json
-import os
 import sys
 import tempfile
 import unittest
@@ -450,7 +449,6 @@ class TestEvidenceSnapshotId(unittest.TestCase):
 
     def test_none_error_log_handled(self):
         """Evidence with error_log=None-equivalent should not crash."""
-        import hashlib
 
         from src.healing.planner import _evidence_snapshot_id
 

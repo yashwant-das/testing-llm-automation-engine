@@ -251,7 +251,6 @@ def run_generation_benchmark(
 # ---------------------------------------------------------------------------
 
 if __name__ == "__main__":
-    import json
     import sys
 
     from src.agents.generator import generate_test_script

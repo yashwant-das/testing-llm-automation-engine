@@ -17,7 +17,7 @@ so that ``src/observability`` code only needs to import from this module.
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import List, Literal, Optional
+from typing import List, Literal
 
 from pydantic import BaseModel, Field
 

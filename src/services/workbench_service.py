@@ -103,7 +103,7 @@ def run_classification_benchmark() -> str:
     Returns:
         Markdown string suitable for display in a ``gr.Markdown`` component.
     """
-    from benchmarks.healing.runner import load_dataset, run_healing_benchmark
+    from benchmarks.healing.runner import run_healing_benchmark
     from schemas.evaluation import BenchmarkRunConfig
 
     if not _DATASET_PATH.exists():

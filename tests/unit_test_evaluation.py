@@ -17,7 +17,6 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import MagicMock
 
 # ---------------------------------------------------------------------------
 # Generation
@@ -47,9 +46,7 @@ from benchmarks.healing.runner import (
 # Intent validation
 # ---------------------------------------------------------------------------
 from benchmarks.intent_validation.runner import (
-    IntentCase,
     evaluate_test_intent,
-    run_intent_validation,
 )
 
 # ---------------------------------------------------------------------------
@@ -404,7 +401,7 @@ class TestGenerationEvaluator(unittest.TestCase):
 
     def test_missing_assertion_fails(self):
         scenario = _make_gen_scenario(must_use_assertions=["expect"])
-        code = f'import {{ test }} from "@playwright/test";\ntest("x", async ({{page}}) => {{ await page.goto("https://example.com"); }});'
+        code = 'import { test } from "@playwright/test";\ntest("x", async ({page}) => { await page.goto("https://example.com"); });'
         result = evaluate_generated_code(code, scenario)
         self.assertFalse(result.passed)
         self.assertTrue(any("assertion" in f for f in result.details["checks_failed"]))

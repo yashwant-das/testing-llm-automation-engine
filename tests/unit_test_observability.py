@@ -24,7 +24,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 from schemas.artifacts import TraceMetadata
-from src.observability import NullTracer, Tracer, configure_tracer, get_tracer
+from src.observability import Tracer, configure_tracer, get_tracer
 from src.observability.schemas import (
     SessionSpan,
     SubprocessSpan,
