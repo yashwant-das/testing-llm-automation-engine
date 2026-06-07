@@ -244,11 +244,11 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── evaluation/               # Benchmark and evaluation documentation
 │   ├── prompts/                  # Prompt design and versioning documentation
 │   ├── development/              # Developer onboarding and contribution guides
+│   ├── history/                  # Archived planning and evaluation documents
 │   ├── decisions.md              # Architecture Decision Records
-│   ├── progress.md               # Phase-by-phase completion record
-│   ├── modernization-plan.md     # 11-phase modernization plan
-│   ├── technical-debt.md         # Debt register (all resolved through Phase 9)
-│   └── scorecard.md              # Repository maturity scorecard
+│   ├── scorecard.md              # Repository maturity scorecard
+│   ├── backlog.md                # Future work and research topics
+│   └── GOVERNANCE.md             # Documentation governance rules
 ├── tests/
 │   ├── unit_test_*.py            # 440 unit tests (zero live LLM or browser calls)
 │   ├── fixtures/                 # Broken .spec.ts files for benchmark/repair testing

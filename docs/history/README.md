@@ -19,6 +19,10 @@
 | `documentation-audit.md` | Phase D1 audit of documentation accuracy | Internal process document. Audit is complete. |
 | `ast-evaluation.md` | Tool comparison: ts-morph vs Babel vs tree-sitter vs SWC | Decision recorded in ADR-003. The evaluation document retains research value. |
 | `observability-evaluation.md` | Tool comparison: OTEL vs Langfuse vs custom JSONL tracer | Decision recorded in ADR-004. The evaluation document retains research value. |
+| `technical-debt.md` | 15-item technical debt register from the modernization program | All 15 items resolved. Debt is fully retired. |
+| `phase-12-documentation-modernization.md` | Phase 12 execution log — documentation governance & cleanup | Phase complete. |
+| `phase-13-quality-gates-modernization.md` | Phase 13 execution log — GitHub Actions CI & pytest | Phase complete. |
+| `phase-14-repository-rationalization.md` | Phase 14 execution log — dead code removal & legacy cleanup | Phase complete. |
 
 ---
 

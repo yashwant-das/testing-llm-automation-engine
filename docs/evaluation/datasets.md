@@ -92,21 +92,20 @@ The `benchmarks/mutations/mutator.py` module creates broken specs from working o
 
 ```python
 from benchmarks.mutations.mutator import mutate, MutationType
+from pathlib import Path
 
-broken_code = mutate(working_code, MutationType.SELECTOR_DRIFT, seed=42)
-# broken_code now has a selector that does not exist in the DOM
+result = mutate(Path("tests/fixtures/broken_selector.spec.ts"), MutationType.SELECTOR_DRIFT)
+# result.mutated_code has a selector replaced with a drifted version
 ```
 
 Mutation types and the failure type they produce:
 
 | MutationType | What changes | Produces |
 | --- | --- | --- |
-| `SELECTOR_DRIFT` | Replaces a valid locator with `#nonexistent-id-xyz` | `LOCATOR_NOT_FOUND` |
-| `TIMEOUT_REDUCTION` | Changes `{ timeout: N }` to `{ timeout: 1 }` | `TIMEOUT` |
-| `IMPORT_REMOVAL` | Removes `import { test, expect }` | `JAVASCRIPT_ERROR` |
-| `ASSERTION_SWAP` | Changes `toHaveText` to `toBe` | `ASSERTION_FAILED` |
-
-The `seed` parameter makes mutations deterministic — same seed + same input always produces the same broken code.
+| `SELECTOR_DRIFT` | Replaces a valid locator with a broken selector | `LOCATOR_NOT_FOUND` |
+| `TIMEOUT_TOO_SHORT` | Reduces `timeout: N` values to 1000ms | `TIMEOUT` |
+| `MISSING_IMPORT` | Removes a named import from `@playwright/test` | `JAVASCRIPT_ERROR` |
+| `ASSERTION_SWAP` | Swaps an assertion method (e.g. `toBeVisible` → `toBe`) | `ASSERTION_FAILED` |
 
 ---
 

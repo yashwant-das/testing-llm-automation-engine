@@ -1,7 +1,7 @@
 import unittest
 
+from schemas.shared import FailureType
 from src.healing.classifier import classify_failure_heuristic
-from src.models.healing_model import FailureType
 
 
 class TestFailureClassification(unittest.TestCase):

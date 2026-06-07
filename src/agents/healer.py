@@ -1,8 +1,12 @@
 """
-Compatibility shim — all public symbols re-exported from src.healing.
+CLI entrypoint for the healing pipeline.
 
-Deprecated: import directly from src.healing or its sub-modules.
-This file will be deleted in Phase 5.
+Re-exports all public symbols from src.healing for backwards-compatible
+imports.  The ``if __name__ == "__main__"`` block enables:
+
+    python -m src.agents.healer tests/generated/broken.spec.ts
+
+New code should import directly from src.healing or its sub-modules.
 """
 
 from src.healing import (

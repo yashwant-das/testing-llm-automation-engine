@@ -37,7 +37,7 @@ def analyze_visual_streaming(
     from schemas.generation import GenerationResult
     from src.context.screenshot import capture_screenshot
     from src.llm import get_default_router
-    from src.utils.llm import _extract_code_block
+    from src.utils.llm import extract_code_block
     from src.utils.prompt_loader import load_prompt
     from src.utils.validation import (
         ValidationError,
@@ -159,7 +159,7 @@ def analyze_visual_streaming(
             )
             return
 
-        extracted = _extract_code_block(llm_response.content)
+        extracted = extract_code_block(llm_response.content)
         try:
             result = GenerationResult(code=extracted)
         except ValueError as exc:

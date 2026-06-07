@@ -1,12 +1,8 @@
 import unittest
 
+from schemas.healing import Evidence, HealingAction, HealingDecision
+from schemas.shared import FailureType
 from src.healing.repair import apply_fix
-from src.models.healing_model import (
-    Evidence,
-    FailureType,
-    HealingAction,
-    HealingDecision,
-)
 
 
 class TestFixApplication(unittest.TestCase):

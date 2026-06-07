@@ -1,68 +1,19 @@
 """
-LLM client utilities for OpenAI-compatible API interactions.
+LLM response parsing utilities.
 
 Public API:
-  get_client()              — deprecated shim; returns a client via LLMClientFactory
-  get_model(vision=False)   — deprecated shim; returns model via LLMRouter
-  parse_llm_response()      — parse and validate an LLM response with Pydantic
-  extract_code_block()      — legacy code extractor (deprecated, no callers; Phase 4 will delete)
-  extract_json_block()      — legacy JSON extractor (kept for unit_test_json.py; Phase 4 will delete)
-
-Note: get_client() and get_model() are deprecated and will be removed in Phase 3
-when app.py is replaced with the service layer. All new code should import
-from src.llm directly:
-
-    from src.llm import get_default_router
-    response = get_default_router().complete_primary(messages=[...])
+  parse_llm_response(raw, model_class)  — validate an LLM response with Pydantic
+  extract_json_block(response)           — extract a JSON string from an LLM response
+  extract_code_block(response)           — extract a TypeScript/JS code block from an LLM response
 """
 
 import logging
 import re
 from typing import Type, TypeVar
 
-from dotenv import load_dotenv
-from openai import OpenAI
 from pydantic import BaseModel, ValidationError
 
-load_dotenv()
-
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Deprecated shims — delegate to src.llm (Phase 3 will remove these)
-# ---------------------------------------------------------------------------
-
-
-def get_client() -> OpenAI:
-    """Return a configured OpenAI-compatible client.
-
-    Deprecated: use src.llm.get_default_router() instead.
-    Kept for backward compatibility with app.py (removed in Phase 3).
-    """
-    from src.llm.client import LLMClientFactory
-
-    return LLMClientFactory.from_env()
-
-
-def get_model(vision: bool = False) -> str:
-    """Return the appropriate model name for the current provider.
-
-    Deprecated: use src.llm.get_default_router().primary_model or .vision_model instead.
-    Kept for backward compatibility with app.py (removed in Phase 3).
-
-    Args:
-        vision: If True, return the vision-capable model.
-    """
-    from src.llm import get_default_router
-
-    router = get_default_router()
-    return router.vision_model if vision else router.primary_model
-
-
-# ---------------------------------------------------------------------------
-# Structured-output parsing (Phase 1 addition)
-# ---------------------------------------------------------------------------
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -97,7 +48,7 @@ def parse_llm_response(raw_content: str, model_class: Type[T]) -> T:
 
     # Strategy 2: extract JSON from markdown and retry
     try:
-        json_str = _extract_json_block(raw_content)
+        json_str = extract_json_block(raw_content)
         return model_class.model_validate_json(json_str)
     except (ValidationError, ValueError) as exc:
         raise ValueError(
@@ -107,17 +58,17 @@ def parse_llm_response(raw_content: str, model_class: Type[T]) -> T:
         ) from exc
 
 
-# ---------------------------------------------------------------------------
-# Internal extraction helpers
-# ---------------------------------------------------------------------------
-
-
-def _extract_json_block(llm_response: str) -> str:
+def extract_json_block(llm_response: str) -> str:
     """Extract a JSON string from an LLM response.
 
-    Internal helper used by parse_llm_response().  Prefers a fenced ```json
-    block; falls back to finding the outermost { … } pair.  Also strips
-    invalid control characters that some models emit.
+    Prefers a fenced ```json block; falls back to finding the outermost
+    { … } pair.  Also strips invalid control characters that some models emit.
+
+    Args:
+        llm_response: Raw string returned by the LLM.
+
+    Returns:
+        Extracted JSON string, or the original string if no JSON block found.
     """
     if not llm_response:
         return "{}"
@@ -141,11 +92,17 @@ def _extract_json_block(llm_response: str) -> str:
     return json_str
 
 
-def _extract_code_block(llm_response: str) -> str:
+def extract_code_block(llm_response: str) -> str:
     """Extract a TypeScript/JavaScript code block from an LLM response.
 
-    Internal helper.  Prefers a fenced ```typescript or ```ts block;
-    falls back to stripping markdown artefacts from the raw text.
+    Prefers a fenced ```typescript or ```ts block; falls back to stripping
+    markdown artefacts from the raw text.
+
+    Args:
+        llm_response: Raw string returned by the LLM.
+
+    Returns:
+        Extracted code string, or empty string if response is empty.
     """
     if not llm_response:
         return ""
@@ -169,27 +126,3 @@ def _extract_code_block(llm_response: str) -> str:
         if not line.lower().strip().startswith(("here", "sure", "certainly", "i have"))
     ]
     return "\n".join(lines).strip()
-
-
-# ---------------------------------------------------------------------------
-# Legacy public aliases (maintained for app.py and unit_test_json.py)
-# Phase 2 / Phase 3 will remove all external callers.
-# ---------------------------------------------------------------------------
-
-
-def extract_code_block(llm_response: str) -> str:
-    """Extract a TypeScript code block from an LLM response.
-
-    Deprecated: use parse_llm_response() with GenerationResult instead.
-    No remaining callers — will be deleted in Phase 4.
-    """
-    return _extract_code_block(llm_response)
-
-
-def extract_json_block(llm_response: str) -> str:
-    """Extract a JSON string from an LLM response.
-
-    Deprecated: use parse_llm_response() with a Pydantic model instead.
-    Kept for backward compatibility with unit_test_json.py.
-    """
-    return _extract_json_block(llm_response)

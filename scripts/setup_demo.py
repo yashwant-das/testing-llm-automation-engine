@@ -46,7 +46,7 @@ test('login failure demo', async ({ page }) => {
         "                (Optional: Add '--max-retries 3' to configure healing attempts)"
     )
     print(
-        "Option B (UI):  python src/app.py -> 'Self-Healer' tab -> Upload 'tests/generated/demo_broken.spec.ts'"
+        "Option B (UI):  uv run src/app.py -> 'Healing Pipeline' tab -> Upload 'tests/generated/demo_broken.spec.ts'"
     )
 
 
