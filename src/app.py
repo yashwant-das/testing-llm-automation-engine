@@ -169,14 +169,16 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                                 elem_classes=["tall-textbox"],
                             )
 
+            gen_meta_state = gr.State(None)
+
             gen_btn.click(
                 fn=generate_test_streaming,
                 inputs=[url_in, story_in],
-                outputs=[gen_timeline, code_out],
+                outputs=[gen_timeline, code_out, gen_meta_state],
             )
             run_btn.click(
                 fn=run_test_streaming,
-                inputs=[url_in, code_out, story_in],
+                inputs=[url_in, code_out, story_in, gen_meta_state],
                 outputs=[gen_timeline, result_out],
             )
 
@@ -270,14 +272,16 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                                 elem_classes=["tall-textbox"],
                             )
 
+            v_meta_state = gr.State(None)
+
             v_btn.click(
                 fn=analyze_visual_streaming,
                 inputs=[v_url_in, v_story_in],
-                outputs=[v_timeline, v_image_preview, v_code_out],
+                outputs=[v_timeline, v_image_preview, v_code_out, v_meta_state],
             )
             v_run_btn.click(
                 fn=run_vision_test_streaming,
-                inputs=[v_url_in, v_code_out, v_story_in],
+                inputs=[v_url_in, v_code_out, v_story_in, v_meta_state],
                 outputs=[v_timeline, v_result_out],
             )
 

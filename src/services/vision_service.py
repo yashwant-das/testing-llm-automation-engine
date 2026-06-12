@@ -20,7 +20,7 @@ SCREENSHOT_DIR = PROJECT_ROOT / "tests" / "screenshots"
 
 def analyze_visual_streaming(
     url: str, instruction: str
-) -> Iterator[tuple[str, Optional[str], str]]:
+) -> Iterator[tuple[str, Optional[str], str, Optional[dict]]]:
     """Capture a screenshot and analyze it with the vision LLM, yielding progress.
 
     The screenshot path is yielded as the second element of the tuple as soon as
@@ -32,7 +32,8 @@ def analyze_visual_streaming(
         instruction: Test scenario instruction (validated internally).
 
     Yields:
-        (timeline_markdown, screenshot_path_or_None, code_or_empty)
+        (timeline_markdown, screenshot_path_or_None, code_or_empty, llm_metadata_or_None)
+        — metadata dict is non-None only on the final successful yield.
     """
     from schemas.generation import GenerationResult, VisionDecision
     from src.context.screenshot import capture_screenshot
@@ -53,7 +54,7 @@ def analyze_visual_streaming(
 
     # --- Validate ---
     timeline += "→ Input validation: checking URL and instruction...\n\n"
-    yield timeline, None, ""
+    yield timeline, None, "", None
 
     try:
         validated_url = validate_and_sanitize_url(url)
@@ -64,16 +65,17 @@ def analyze_visual_streaming(
             timeline + f"❌ Validation error: {exc}",
             None,
             f"Validation Error: {exc}",
+            None,
         )
         return
     except Exception as exc:
         tracer.end_session(trace_id, success=False)
-        yield timeline + f"❌ Error: {exc}", None, f"Error: {exc}"
+        yield timeline + f"❌ Error: {exc}", None, f"Error: {exc}", None
         return
 
     # --- Capture screenshot ---
     timeline += "→ Screenshot: launching Playwright, navigating to URL...\n\n"
-    yield timeline, None, ""
+    yield timeline, None, "", None
 
     clean_inst = re.sub(r"[^a-zA-Z0-9\s]", "", validated_instruction).lower()
     snake_inst = "_".join(clean_inst.split())[:30]
@@ -100,12 +102,13 @@ def analyze_visual_streaming(
             timeline + "❌ Screenshot not created",
             None,
             f"Error: Screenshot was not created at {screenshot_path}",
+            None,
         )
         return
 
     # Yield screenshot preview before the (slow) LLM call
     timeline += "✅ Screenshot captured\n\n"
-    yield timeline, screenshot_path, ""
+    yield timeline, screenshot_path, "", None
 
     # --- Encode screenshot ---
     try:
@@ -117,12 +120,13 @@ def analyze_visual_streaming(
             timeline + f"❌ Encoding error: {exc}",
             screenshot_path,
             f"Error: {exc}",
+            None,
         )
         return
 
     # --- Vision LLM ---
     timeline += "→ LLM call: vision model analyzing screenshot...\n\n"
-    yield timeline, screenshot_path, ""
+    yield timeline, screenshot_path, "", None
 
     try:
         prompt_version = get_prompt_version("vision")
@@ -158,6 +162,7 @@ def analyze_visual_streaming(
                 timeline + "❌ LLM error: vision model returned empty response",
                 screenshot_path,
                 "Error: Vision LLM returned empty response",
+                None,
             )
             return
 
@@ -170,6 +175,7 @@ def analyze_visual_streaming(
                 timeline + f"❌ Code extraction error: {exc}",
                 screenshot_path,
                 f"Error: Could not extract valid code from vision LLM response: {exc}",
+                None,
             )
             return
 
@@ -179,6 +185,7 @@ def analyze_visual_streaming(
             timeline + f"❌ LLM error: {exc}",
             screenshot_path,
             f"Vision LLM Error: {exc}",
+            None,
         )
         return
 
@@ -201,30 +208,39 @@ def analyze_visual_streaming(
     emit_decision(vision_decision, "vision_decision")
     tracer.end_session(trace_id, success=True)
 
-    timeline += (
-        f"✅ Generation complete — {result.line_count} lines\n\n"
-        f"── Model ──────────────────────────────────────\n\n"
-        f"Provider : `{llm_response.provider}`  \n"
-        f"Model    : `{llm_response.model_used}`  \n"
-        f"Tokens   : {llm_response.input_tokens:,} in / {llm_response.output_tokens:,} out  \n"
-        f"Latency  : {llm_response.latency_ms:,} ms  \n\n"
-    )
-    yield timeline, screenshot_path, result.code
+    timeline += f"✅ Generation complete — {result.line_count} lines\n\n"
+    metadata = {
+        "provider": llm_response.provider,
+        "model": llm_response.model_used,
+        "input_tokens": llm_response.input_tokens,
+        "output_tokens": llm_response.output_tokens,
+        "latency_ms": llm_response.latency_ms,
+    }
+    yield timeline, screenshot_path, result.code, metadata
 
 
 def run_vision_test_streaming(
-    url: str, code: str, instruction: str
+    url: str,
+    code: str,
+    instruction: str,
+    metadata: Optional[dict] = None,
 ) -> Iterator[tuple[str, str]]:
     """Run a vision-generated test, relabelling the timeline for the visual tab.
 
     Thin wrapper around generation_service.run_test_streaming.
+
+    Args:
+        metadata: Optional LLM metadata from the analyze step. Surfaced in
+                  the Execution Log alongside the Playwright result.
 
     Yields:
         (timeline_markdown, logs_or_empty)
     """
     from src.services.generation_service import run_test_streaming
 
-    for timeline_val, logs_val in run_test_streaming(url, code, instruction):
+    for timeline_val, logs_val in run_test_streaming(
+        url, code, instruction, metadata=metadata
+    ):
         yield (
             timeline_val.replace(
                 "Test Execution Timeline", "Visual Test Execution Timeline"
