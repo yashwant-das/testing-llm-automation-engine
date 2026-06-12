@@ -170,6 +170,6 @@ path = run.save_report(Path("benchmarks/reports/"))
 
 ## Running From the UI
 
-The **Benchmark Explorer** tab runs the healing classification benchmark with one click. No configuration required. Results appear as a markdown table.
+The **Evaluation** tab runs the healing classification benchmark with one click. No configuration required. Results appear as a markdown table.
 
-The Benchmark Explorer always runs in classification-only mode (no LLM required). Full repair mode must be run from Python.
+The Evaluation tab always runs in classification-only mode (no LLM required). Full repair mode must be run from Python.

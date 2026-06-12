@@ -1,6 +1,6 @@
 # Architecture Overview
 
-> This document describes the implemented architecture as of Phase 10 (UI Reposition).
+> This document describes the implemented architecture as of Phase 17 (Workbench Redesign).
 > All components described here exist in the codebase.
 
 ---
@@ -22,7 +22,8 @@ The architecture is designed around three constraints:
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │                          Gradio UI (src/app.py)                      │
-│  6 tabs — Generation | Healing | Vision | Artifacts | Bench | Traces │
+│  8 tabs — Overview | Generation | Healing | Vision | Artifacts |     │
+│           Evaluation | Traces | Models                               │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │ imports only from src/services/
 ┌──────────────────────────▼──────────────────────────────────────────┐
@@ -71,7 +72,11 @@ All inter-layer communication uses Pydantic models from `schemas/`. No raw dicts
 | `ContextSnapshot` | `schemas/artifacts.py` | `context/collector.py` | `evidence.py`, `generator.py` |
 | `TraceMetadata` | `schemas/artifacts.py` | `llm/router.py` | `observability/tracer.py` |
 | `LLMRequest` / `LLMResponse` | `src/llm/router.py` | `LLMRouter.complete_*()` | all callers |
-| `GenerationResult` | `schemas/generation.py` | `generator.py` | `generation_service.py` |
+| `GenerationResult` | `schemas/generation.py` | internal (validates raw LLM code) | `generator.py` |
+| `GenerationDecision` | `schemas/generation.py` | `generator.py` | `generation_service.py`, `artifact_store`, UI |
+| `VisionDecision` | `schemas/generation.py` | `vision_service.py` | `workbench_service.py`, UI |
+| `ProvenanceRecord` | `schemas/shared.py` | (base class) | `HealingDecision`, `GenerationDecision`, `VisionDecision` |
+| `LLMConfig` | `schemas/shared.py` | `src/llm/__init__.py` | `LLMClientFactory` |
 | `BenchmarkRun` | `schemas/evaluation.py` | benchmark runners | `workbench_service.py`, reports |
 | `RunResult` | `schemas/shared.py` | `healing/runner.py` | `healing_service.py` |
 
@@ -96,7 +101,7 @@ All inter-layer communication uses Pydantic models from `schemas/`. No raw dicts
 | Component | File(s) | Responsibility |
 | --- | --- | --- |
 | Generation pipeline | `src/agents/generator.py` | Context collection → prompt → LLM → GenerationResult |
-| Vision pipeline | `src/agents/vision.py` | Screenshot → vision LLM → TypeScript |
+| Vision pipeline | `src/services/vision_service.py` | Screenshot → vision LLM → TypeScript → VisionDecision |
 | Healing pipeline | `src/healing/` (7 modules) | Failure diagnosis, repair, verification, artifact emission |
 | Context collection | `src/context/` (7 modules) | Single browser session → ContextSnapshot |
 | LLM routing | `src/llm/` (4 modules) | Provider config, retry, fallback, response capture |

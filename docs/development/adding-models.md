@@ -104,4 +104,4 @@ If `model_used` is empty, the provider's response did not include the model name
 
 Vision models are separate from text/code models. They are configured via `*_VISION_MODEL` environment variables and used in `router.complete_vision()`. The same provider infrastructure handles both — the only difference is which model name is passed in the request.
 
-If the vision model speaks the OpenAI Vision API (image URL or base64 in the user message), no additional code changes are needed. If it uses a different image format, update `src/agents/vision.py` to format the image correctly.
+If the vision model speaks the OpenAI Vision API (image URL or base64 in the user message), no additional code changes are needed. If it uses a different image format, update `src/services/vision_service.py` to format the image correctly.

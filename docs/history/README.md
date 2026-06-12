@@ -23,6 +23,10 @@
 | `phase-12-documentation-modernization.md` | Phase 12 execution log — documentation governance & cleanup | Phase complete. |
 | `phase-13-quality-gates-modernization.md` | Phase 13 execution log — GitHub Actions CI & pytest | Phase complete. |
 | `phase-14-repository-rationalization.md` | Phase 14 execution log — dead code removal & legacy cleanup | Phase complete. |
+| `phase-15-experience-consistency.md` | Phase 15 execution log — phase-ref cleanup, gitignore, smoke test, example hardening | Phase complete. |
+| `phase-16-ui-audit.md` | Phase 16 audit of the workbench UI against the post-modernization architecture | Audit findings fully addressed in Phase 17. |
+| `phase-17-workbench-redesign.md` | Phase 17 plan and execution log — Overview tab, unified artifacts, Evaluation workspace, observability activation, Models tab | Phase complete. |
+| `phase-18-documentation-audit.md` | Phase 18 documentation reality audit — full inventory, wrong facts, gaps, modernization plan | Audit complete. All fixes applied. |
 
 ---
 

@@ -48,7 +48,8 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
 │                    Gradio UI (src/app.py)                    │
-│  Generation │ Healing │ Vision │ Artifacts │ Benchmark │ Traces │
+│  Overview │ Generation │ Healing │ Vision │ Artifacts │       │
+│  Evaluation │ Traces │ Models                               │
 └──────┬──────┴────┬────┴───┬────┴─────┬─────┴─────┬─────┴───┬───┘
        │           │        │          │            │         │
        ▼           ▼        ▼          │            ▼         ▼
@@ -118,7 +119,11 @@ Open `http://127.0.0.1:7860`.
 
 ## The Workbench
 
-The UI has six tabs:
+The UI has eight tabs:
+
+### Overview
+
+Shows the system status summary and a unified run history table — one row per decision artifact across all three pipelines (generation, healing, vision). Click **Refresh Recent Runs** to reload.
 
 ### Generation Pipeline
 
@@ -146,13 +151,20 @@ Enter a URL and instruction. The pipeline captures a screenshot, sends it to a v
 
 Browse `tests/artifacts/healing_decision_*.json` artifacts written after every healing session. Selecting an artifact renders the full markdown report alongside the raw JSON. The report includes Phase 9 provenance fields: which model, which prompt version and hash, how long the planning took, and which evidence snapshot was used.
 
-### Benchmark Explorer
+### Evaluation
 
-Run the heuristic failure-classification benchmark against `benchmarks/healing/fixtures/repair_scenarios.json`. No LLM or browser required — fully deterministic, completes in milliseconds. Shows a pass/fail table per case with expected vs. classified failure type and confidence scores.
+Two sub-tabs:
+
+- **Heuristic Classification** — runs the heuristic failure-classification benchmark against `benchmarks/healing/fixtures/repair_scenarios.json`. No LLM or browser required, completes in milliseconds. Shows pass/fail per case with expected vs. classified failure type and confidence scores.
+- **Generation (LLM)** — runs the generation benchmark against `benchmarks/generation/fixtures/web_scenarios.json`. Requires a live LLM.
 
 ### Trace Inspector
 
 Load and inspect `logs/traces.jsonl`. Displays three tables — session spans, LLM call spans, and subprocess spans — all linked by `trace_id`. Useful for understanding token usage, latency distribution, and retry patterns without leaving the UI.
+
+### Models
+
+Displays active model configuration from environment variables (`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, `OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`) alongside capability metadata from the `ModelRegistry`. Click **Refresh** to reload.
 
 ---
 
@@ -174,15 +186,15 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 ```text
 .
 ├── src/
-│   ├── app.py                    # Gradio UI — 6-tab workbench, wiring only
-│   ├── agents/                   # Agent shims (compatibility layer)
-│   │   ├── generator.py
-│   │   └── healer.py             # Thin shim → src/healing/ + CLI entrypoint
+│   ├── app.py                    # Gradio UI — 8-tab workbench, wiring only
+│   ├── agents/                   # Pipeline entry points
+│   │   ├── generator.py          # Context collection + LLM → GenerationDecision
+│   │   └── healer.py             # CLI entrypoint + re-exports src/healing/ public API
 │   ├── services/                 # Service layer (UI → pipelines boundary)
 │   │   ├── generation_service.py
 │   │   ├── healing_service.py
 │   │   ├── vision_service.py
-│   │   └── workbench_service.py  # Artifact Inspector, Benchmark Explorer, Trace Inspector
+│   │   └── workbench_service.py  # Overview, Artifact Inspector, Evaluation, Trace Inspector, Models
 │   ├── healing/                  # Healing pipeline — 7 single-responsibility modules
 │   │   ├── classifier.py         # Heuristic failure classification
 │   │   ├── planner.py            # LLM reasoning → HealingDecision
@@ -209,15 +221,17 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   │   ├── writer.py             # Thread-safe JSONL appender
 │   │   └── schemas.py            # SubprocessSpan, SessionSpan, TraceSession
 │   └── utils/
-│       ├── llm.py                # parse_llm_response() + deprecated shims
+│       ├── llm.py                # parse_llm_response() + extract_json_block(), extract_code_block()
 │       ├── prompt_loader.py      # load_prompt(), get_prompt_hash(), get_prompt_version()
+│       ├── browser.py            # extract_domain() — URL → clean domain name for filenames
+│       ├── formatting.py         # clean_ansi_codes(), format_test_result()
 │       └── validation.py         # Input validation
 ├── schemas/                      # Pydantic data contracts
 │   ├── healing.py                # HealingAnalysis, HealingDecision, Evidence, HealingAction
-│   ├── generation.py             # GenerationResult
+│   ├── generation.py             # GenerationResult, GenerationDecision, VisionDecision
 │   ├── evaluation.py             # BenchmarkRun, BenchmarkRunConfig, EvaluationResult
 │   ├── artifacts.py              # ContextSnapshot, TraceMetadata
-│   └── shared.py                 # FailureType, RunResult
+│   └── shared.py                 # FailureType, RunResult, ProvenanceRecord, LLMConfig
 ├── benchmarks/                   # Evaluation framework
 │   ├── healing/
 │   │   ├── runner.py             # Healing benchmark runner
@@ -251,7 +265,7 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── docker.md                 # Docker setup and deployment
 │   └── env-variables.md          # Environment variable reference
 ├── tests/
-│   ├── unit_test_*.py            # 440 unit tests (zero live LLM or browser calls)
+│   ├── unit_test_*.py            # 553 unit tests (zero live LLM or browser calls)
 │   ├── fixtures/                 # Broken .spec.ts files for benchmark/repair testing
 │   ├── generated/                # Generated specs (runtime output)
 │   └── artifacts/                # HealingDecision JSON artifacts (runtime output)
@@ -352,7 +366,7 @@ The Trace Inspector tab in the workbench renders these tables without needing `j
 ## Development Commands
 
 ```bash
-# Run all unit tests (440 tests, no live LLM or browser required)
+# Run all unit tests (553 tests, no live LLM or browser required)
 uv run python -m pytest tests/unit_test_*.py -q
 
 # Lint and format (Python + TypeScript + Markdown)
@@ -376,4 +390,4 @@ uv run python -m pytest tests/unit_test_healing.py -v
 - [`docs/development/setup.md`](docs/development/setup.md) — full setup and troubleshooting guide
 - [`docs/development/adding-models.md`](docs/development/adding-models.md) — how to add a new LLM provider
 - [`docs/decisions.md`](docs/decisions.md) — all Architecture Decision Records
-- [`docs/progress.md`](docs/progress.md) — phase-by-phase completion record
+- [`docs/history/`](docs/history/) — phase-by-phase completion records and archived plans

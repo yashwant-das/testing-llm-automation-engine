@@ -53,7 +53,7 @@ analysis = parse_llm_response(raw_content, HealingAnalysis)
 
 - Schema definitions: `schemas/` (5 modules, ~15 models)
 - Parser: `src/utils/llm.parse_llm_response()`
-- Validation on every LLM call: `planner.py`, `generator.py`, `vision.py`
+- Validation on every LLM call: `planner.py`, `generator.py`, `vision_service.py`
 
 ### Why It Matters
 

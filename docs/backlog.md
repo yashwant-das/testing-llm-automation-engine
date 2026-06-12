@@ -158,5 +158,5 @@ Known rough edges that reduce maintainability but have no user-visible impact.
 
 | Item | Notes |
 | --- | --- |
-| `src/utils/llm.py::extract_json_block()` | Still tested in `unit_test_json.py`. Safe to remove once test is migrated to call `parse_llm_response()` directly. |
-| `src/utils/llm.py::extract_code_block()` | No remaining callers in production. Safe to remove once `unit_test_json.py` is updated. |
+| `src/utils/llm.py::extract_json_block()` | Private implementation used inside `parse_llm_response()` — not a candidate for removal. Exported in the module docstring as a convenience; could be made private (`_extract_json_block`) if desired. |
+| `src/utils/llm.py::extract_code_block()` | Still called in `src/agents/generator.py`. Remove only after migrating the generator to use `GenerationResult.model_validate()` on the raw LLM output. |

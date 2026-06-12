@@ -158,7 +158,7 @@ Retries fire on: transient HTTP errors (5xx, 429), connection errors, and empty 
 
 ## Testability
 
-All unit tests in the suite use mocked routers. The `LLMRouter` is injected into pipeline modules via `get_default_router()`, which returns a cached singleton. Tests patch `src.healing.planner.get_default_router` to return a `MagicMock` with a controlled `complete_primary.return_value`. Zero live LLM calls across 440 tests.
+All unit tests in the suite use mocked routers. The `LLMRouter` is injected into pipeline modules via `get_default_router()`, which returns a cached singleton. Tests patch `src.healing.planner.get_default_router` to return a `MagicMock` with a controlled `complete_primary.return_value`. Zero live LLM calls across 553 tests.
 
 ---
 

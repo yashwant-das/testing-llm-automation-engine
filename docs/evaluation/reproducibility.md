@@ -54,7 +54,7 @@ If two runs have the same `prompt_version` but different `prompt_hash`, the prom
 
 ## Heuristic Reproducibility
 
-The heuristic classifier (`classify_failure_heuristic`) is fully deterministic — it uses regex patterns, not probabilistic models. A heuristic benchmark run is reproducible by definition, regardless of temperature or seed. This is why the Benchmark Explorer tab can run it with a single button click and always get the same result.
+The heuristic classifier (`classify_failure_heuristic`) is fully deterministic — it uses regex patterns, not probabilistic models. A heuristic benchmark run is reproducible by definition, regardless of temperature or seed. This is why the Evaluation tab can run it with a single button click and always get the same result.
 
 ---
 

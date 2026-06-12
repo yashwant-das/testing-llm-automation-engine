@@ -1,6 +1,6 @@
 # Generation Pipeline Architecture
 
-> Covers: `src/agents/generator.py`, `src/agents/vision.py`, `src/services/generation_service.py`, `src/services/vision_service.py`, `src/context/`
+> Covers: `src/agents/generator.py`, `src/services/generation_service.py`, `src/services/vision_service.py`, `src/context/`
 
 ---
 
@@ -55,9 +55,9 @@ sequenceDiagram
     GEN->>LLM: complete_primary(messages, temperature=0.1)
     LLM-->>GEN: LLMResponse(content=<TypeScript code>)
     GEN->>GEN: extract_code_block(content)
-    GEN->>GEN: GenerationResult.model_validate(...)
+    GEN->>GEN: build GenerationDecision (code + full provenance)
     GEN->>FS: write tests/generated/<slug>.spec.ts
-    GEN-->>SVC: GenerationResult
+    GEN-->>SVC: GenerationDecision
     SVC-->>UI: yield (timeline_md, code)
 ```
 
@@ -106,7 +106,6 @@ The LLM response is extracted as a code block and validated into a `GenerationRe
 sequenceDiagram
     participant UI as Gradio UI
     participant SVC as vision_service
-    participant VIS as vision.py
     participant SCR as context/screenshot
     participant LLM as LLMRouter (vision)
     participant FS as filesystem
@@ -115,13 +114,11 @@ sequenceDiagram
     SVC->>SCR: capture_screenshot(url, dir)
     SCR->>SCR: open browser → goto(url) → screenshot
     SCR-->>SVC: screenshot_path
-    SVC->>VIS: analyze_visual_ui(url, instruction, screenshot_path)
-    VIS->>VIS: base64-encode screenshot
-    VIS->>LLM: complete_vision(messages_with_image)
-    LLM-->>VIS: LLMResponse(content=<TypeScript code>)
-    VIS->>VIS: extract_code_block(content) → GenerationResult
-    VIS->>FS: write tests/generated/<slug>.spec.ts
-    VIS-->>SVC: (screenshot_path, GenerationResult)
+    SVC->>SVC: base64-encode screenshot
+    SVC->>LLM: complete_vision(messages_with_image)
+    LLM-->>SVC: LLMResponse(content=<TypeScript code>)
+    SVC->>SVC: extract_code_block(content) → VisionDecision (code + provenance)
+    SVC->>FS: write tests/generated/<slug>.spec.ts
     SVC-->>UI: yield (timeline_md, screenshot_path, code)
 ```
 

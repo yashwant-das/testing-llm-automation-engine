@@ -6,7 +6,7 @@
 
 ## Test Architecture
 
-The project has 440 Python unit tests across 11 files. All tests run without a live LLM, live browser, or network connection.
+The project has 553 Python unit tests across 16 files. All tests run without a live LLM, live browser, or network connection.
 
 | File | What it tests | Key pattern |
 | --- | --- | --- |
@@ -20,8 +20,12 @@ The project has 440 Python unit tests across 11 files. All tests run without a l
 | `unit_test_validation.py` | Input validation | Edge cases, invalid inputs |
 | `unit_test_context.py` | Context collection modules | Mocked Playwright page |
 | `unit_test_observability.py` | Tracer, writer, spans | Real file I/O (temp directory) |
-| `unit_test_explainability.py` | HealingDecision Phase 9 fields | Schema, round-trip, markdown rendering |
+| `unit_test_explainability.py` | HealingDecision provenance fields | Schema, round-trip, markdown rendering |
 | `unit_test_evaluation.py` | Benchmark runners and evaluators | Pure functions + fixture datasets |
+| `unit_test_provenance.py` | GenerationDecision and VisionDecision to_markdown() | Schema construction, markdown output |
+| `unit_test_information_architecture.py` | Workbench service — system overview, artifact listing | workbench_service functions |
+| `unit_test_visibility.py` | Evidence rendering in decision reports | Context inspector, timeline output |
+| `unit_test_workbench_eval.py` | Benchmark report saving and display in workbench | workbench_service evaluation functions |
 
 ---
 

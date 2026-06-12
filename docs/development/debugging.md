@@ -34,7 +34,7 @@ uv run python -c "
 import logging
 logging.basicConfig(level=logging.DEBUG)
 from src.healing.planner import analyze_and_plan
-from src.schemas.healing import Evidence
+from schemas.healing import Evidence
 e = Evidence(error_log='Error: locator.click ...')
 d = analyze_and_plan('test.spec.ts', open('tests/fixtures/example.spec.ts').read(), e)
 print(d.model_dump_json(indent=2))

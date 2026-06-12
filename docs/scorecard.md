@@ -255,6 +255,26 @@ Phase 11 improvements: README rewritten, full architecture docs (7 files with Me
 
 ---
 
+## Post-Phase 17 Notes — 2026-06-07
+
+Phases 12–17 completed since the last scored measurement (Phase 11, 82/100).
+A full re-score has not been performed. Key changes likely to move scores:
+
+- **Documentation** (was 9): Phase 18 audit found multiple stale facts — score
+  temporarily lower until Phase 18 fixes are applied. After Phase 18 it should
+  hold at 9.
+- **Testing** (was 8): Test suite grew from 440 to 553 tests across 16 files
+  (new coverage: provenance, visibility, information architecture, workbench eval).
+  Score likely stable at 8 or higher.
+- **Observability** (was 8): Phase 17 activated `configure_tracer()` in `app.py`
+  (was never called before Phase 17 — critical gap). Score now deserves a 9.
+- **Architecture** (was 8): Phase 17 added unified artifact inspector (all 3
+  pipelines), Overview tab, Models tab, `ProvenanceRecord` base class. Score stable.
+
+A new measurement should be taken after Phase 18 documentation updates are complete.
+
+---
+
 ## Score History
 
 | Date | Total | Notes |
@@ -262,6 +282,7 @@ Phase 11 improvements: README rewritten, full architecture docs (7 files with Me
 | 2026-06-06 | 27/100 | Baseline — Phase 0 audit complete |
 | 2026-06-06 | 80/100 | Post-Phase 10 — UI reposition complete |
 | 2026-06-06 | 82/100 | Post-Phase 11 — Documentation Modernization complete |
+| 2026-06-07 | TBD | Post-Phase 17/18 — workbench redesign + documentation audit |
 
 ---
 

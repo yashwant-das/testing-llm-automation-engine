@@ -70,7 +70,7 @@ ollama serve
 ```bash
 # Run unit tests (no LLM or browser required — should all pass)
 uv run python -m pytest tests/unit_test_*.py -q
-# Expected: 440 passed
+# Expected: 553 passed
 
 # Run the classification benchmark (no LLM required)
 uv run python -c "

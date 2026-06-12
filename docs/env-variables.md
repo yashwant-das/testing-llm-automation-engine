@@ -46,7 +46,7 @@ OLLAMA_VISION_MODEL=qwen3-vl:30b
 
 - **Type**: String
 - **Default**: `lm-studio`
-- **Description**: API key for LM Studio.
+- **Description**: API key for LM Studio. Any non-empty string is accepted.
 
 ### `OLLAMA_URL`
 
@@ -77,6 +77,12 @@ OLLAMA_VISION_MODEL=qwen3-vl:30b
 - **Type**: String
 - **Default**: `qwen3-vl:30b`
 - **Description**: Vision model name for Ollama.
+
+### `OLLAMA_API_KEY`
+
+- **Type**: String
+- **Default**: `ollama`
+- **Description**: API key for Ollama. Any non-empty string is accepted.
 
 ## Usage
 

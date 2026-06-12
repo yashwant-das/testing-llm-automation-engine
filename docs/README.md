@@ -29,10 +29,6 @@ After the overview above, go deeper by subsystem:
 
 1. [`decisions.md`](decisions.md) — all Architecture Decision Records (ADR-001 through ADR-011), each covering context, decision, alternatives considered, and consequences
 
-### "I want to understand the current UX state and what needs to change"
-
-1. [`history/phase-16-ui-audit.md`](history/phase-16-ui-audit.md) — Phase 16 audit of the workbench UI against the post-modernization architecture: strengths, UX debt, visibility/workflow gaps, and prioritized recommendations
-
 ### "I want to set it up and run it"
 
 1. [`development/setup.md`](development/setup.md) — prerequisites, install, first run
@@ -75,7 +71,6 @@ docs/
 ├── decisions.md               ← ADRs: why things are the way they are
 ├── governance.md              ← rules for keeping docs accurate
 ├── scorecard.md               ← repository maturity scores over time
-│   ├── phase-16-ui-audit.md   ← Phase 16 audit of the workbench UX
 ├── backlog.md                 ← unscheduled future work and experiments
 │
 ├── env-variables.md           ← reference: all environment variables
@@ -112,7 +107,10 @@ docs/
 │   └── versioning.md
 │
 └── history/                   ← archived: completed plans, past evaluations
-    └── README.md              ← explains what is archived and why
+    ├── README.md              ← explains what is archived and why
+    ├── phase-15-experience-consistency.md
+    ├── phase-16-ui-audit.md
+    └── phase-17-workbench-redesign.md  (+ earlier phases)
 ```
 
 ---

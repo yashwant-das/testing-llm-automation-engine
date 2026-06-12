@@ -18,7 +18,7 @@ implementation of the patterns described in `docs/ai-systems-engineering.md`.
 
 ```text
 src/
-├── app.py                # Gradio UI — 6-tab workbench, wiring only
+├── app.py                # Gradio UI — 8-tab workbench, wiring only
 ├── agents/               # Pipeline entry points and public API
 │   ├── generator.py      # Orchestrates context collection + LLM call → generated test
 │   └── healer.py         # CLI entrypoint + re-exports src/healing public API
@@ -51,14 +51,16 @@ src/
 └── utils/
     ├── llm.py            # parse_llm_response(), extract_json_block(), extract_code_block()
     ├── prompt_loader.py  # load_prompt(), get_prompt_hash(), get_prompt_version()
+    ├── browser.py        # extract_domain() — URL → clean domain name for filenames
+    ├── formatting.py     # clean_ansi_codes(), format_test_result()
     └── validation.py     # Input validation
 
 schemas/                  # Pydantic data contracts (source of truth for all data shapes)
 ├── healing.py            # HealingAnalysis, HealingDecision, Evidence, HealingAction
-├── generation.py         # GenerationResult
+├── generation.py         # GenerationResult, GenerationDecision, VisionDecision
 ├── evaluation.py         # BenchmarkRun, BenchmarkRunConfig, EvaluationResult
 ├── artifacts.py          # ContextSnapshot, TraceMetadata
-└── shared.py             # FailureType, RunResult
+└── shared.py             # FailureType, RunResult, ProvenanceRecord, LLMConfig
 
 benchmarks/               # Evaluation framework
 scripts/
@@ -80,9 +82,9 @@ prompts/                  # LLM system prompts (external markdown files)
 | New data contract | `schemas/` as a Pydantic `BaseModel` |
 | New context collector | `src/context/` + register in `src/context/collector.py` |
 
-**Do not add logic to `src/agents/`.** This package is a compatibility shim layer and is
-targeted for removal. All new pipeline logic goes into `src/healing/`, `src/context/`,
-`src/services/`, or `src/llm/`.
+**Do not add logic to `src/agents/`.** This package contains the public pipeline entry
+points (`generator.py`, `healer.py`) and the CLI interface for the healer. New pipeline
+logic belongs in `src/healing/`, `src/context/`, `src/services/`, or `src/llm/`.
 
 ---
 
@@ -95,7 +97,7 @@ uv sync
 # Install Node.js + Playwright browsers
 npm install && npx playwright install
 
-# Run all Python unit tests (no live LLM or browser required — 440 tests)
+# Run all Python unit tests (no live LLM or browser required — 553 tests)
 uv run python -m pytest tests/unit_test_*.py -q
 
 # Run the classification benchmark (deterministic, no LLM)
