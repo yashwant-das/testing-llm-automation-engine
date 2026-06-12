@@ -2,101 +2,146 @@
 
 This document describes all environment variables used by the AI Engineering Workbench.
 
-## Configuration
+## Quick Start
 
-Create a `.env` file in the project root with the following variables:
+Copy `.env.example` to `.env` and choose **one** provider — only one is active at a time.
 
 ```bash
-# LM Studio Configuration
-# URL where LM Studio is running (default: http://localhost:1234/v1)
-LM_STUDIO_URL=http://localhost:1234/v1
-
-# API Key for LM Studio (default: lm-studio)
-LM_STUDIO_API_KEY=lm-studio
-
-# Text/code model name for LM Studio
-LM_STUDIO_MODEL=qwen/qwen3-coder-30b
-
-# Vision model name for LM Studio
-LM_STUDIO_VISION_MODEL=qwen/qwen3-vl-30b
-
-# Optional Ollama-compatible configuration
-LLM_PROVIDER=lm_studio
-OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=gemma4:26b
-OLLAMA_VISION_MODEL=qwen3-vl:30b
+cp .env.example .env
 ```
 
-## Variable Descriptions
+Then edit `.env` to set `LLM_PROVIDER` and fill in the model names for your chosen provider.
+
+---
+
+## `.env` Template
+
+```env
+# ── Active provider ────────────────────────────────────────────────────────────
+# Set LLM_PROVIDER to either "lm_studio" or "ollama" — only one is active.
+LLM_PROVIDER=lm_studio
+
+# ── LM Studio (active when LLM_PROVIDER=lm_studio) ────────────────────────────
+LM_STUDIO_URL=http://localhost:1234/v1
+LM_STUDIO_TEXT_MODEL=qwen/qwen3.6-35b-a3b    # text / code model
+LM_STUDIO_VISION_MODEL=google/gemma-4-26b-a4b # multimodal model
+
+# ── Ollama (active when LLM_PROVIDER=ollama) ───────────────────────────────────
+# To switch: change LLM_PROVIDER=ollama above and uncomment the lines below.
+# OLLAMA_URL=http://localhost:11434/v1
+# OLLAMA_TEXT_MODEL=qwen3.6:latest
+# OLLAMA_VISION_MODEL=gemma4:26b
+
+# ── Optional ───────────────────────────────────────────────────────────────────
+# LOG_LEVEL=INFO    # DEBUG | INFO | WARNING | ERROR
+```
+
+---
+
+## How to switch providers
+
+To use Ollama instead of LM Studio, make two edits to `.env`:
+
+1. Change `LLM_PROVIDER=lm_studio` → `LLM_PROVIDER=ollama`
+2. Uncomment the `OLLAMA_*` lines and fill in your model names
+
+The `.env` file is loaded automatically at startup via `python-dotenv`. No restart of LM Studio or Ollama is needed — just restart `src/app.py`.
+
+---
+
+## Variable Reference
 
 ### `LLM_PROVIDER`
 
-- **Type**: String
-- **Default**: `lm_studio`
-- **Options**: `lm_studio`, `ollama`
-- **Description**: Determines which LLM service to connect to.
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `lm_studio` |
+| **Options** | `lm_studio`, `ollama` |
 
-### `LM_STUDIO_URL`
+Selects the active LLM backend. Only variables for the selected provider are used; the other set is ignored.
 
-- **Type**: String (URL)
-- **Default**: `http://localhost:1234/v1`
-- **Description**: The base URL when `LLM_PROVIDER` is set to `lm_studio`.
+---
 
-### `LM_STUDIO_API_KEY`
+### LM Studio variables
 
-- **Type**: String
-- **Default**: `lm-studio`
-- **Description**: API key for LM Studio. Any non-empty string is accepted.
+#### `LM_STUDIO_URL`
 
-### `OLLAMA_URL`
+| | |
+| --- | --- |
+| **Type** | String (URL) |
+| **Default** | `http://localhost:1234/v1` |
 
-- **Type**: String (URL)
-- **Default**: `http://localhost:11434/v1`
-- **Description**: The base URL when `LLM_PROVIDER` is set to `ollama`.
+Base URL of the LM Studio local server.
 
-### `LM_STUDIO_MODEL`
+#### `LM_STUDIO_TEXT_MODEL`
 
-- **Type**: String
-- **Default**: `qwen/qwen3-coder-30b`
-- **Description**: Text generation model name for LM Studio.
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `qwen/qwen3.6-35b-a3b` |
 
-### `LM_STUDIO_VISION_MODEL`
+Name of the text/code model loaded in LM Studio. Used by the Generation and Healing pipelines.
 
-- **Type**: String
-- **Default**: `qwen/qwen3-vl-30b`
-- **Description**: Vision model name for LM Studio.
+#### `LM_STUDIO_VISION_MODEL`
 
-### `OLLAMA_MODEL`
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `google/gemma-4-26b-a4b` |
 
-- **Type**: String
-- **Default**: `gemma4:26b`
-- **Description**: Text generation model name for Ollama.
+Name of the vision (multimodal) model loaded in LM Studio. Used by the Vision pipeline.
 
-### `OLLAMA_VISION_MODEL`
+#### `LM_STUDIO_API_KEY`
 
-- **Type**: String
-- **Default**: `qwen3-vl:30b`
-- **Description**: Vision model name for Ollama.
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `lm-studio` |
 
-### `OLLAMA_API_KEY`
+Placeholder API key. LM Studio accepts any non-empty string.
 
-- **Type**: String
-- **Default**: `ollama`
-- **Description**: API key for Ollama. Any non-empty string is accepted.
+---
 
-## Usage
+### Ollama variables
 
-The application uses `python-dotenv` to load these variables from a `.env` file. If no `.env` file exists, the defaults
-listed above will be used.
+#### `OLLAMA_URL`
 
-## Example `.env` File
+| | |
+| --- | --- |
+| **Type** | String (URL) |
+| **Default** | `http://localhost:11434/v1` |
 
-```bash
-LM_STUDIO_API_KEY=lm-studio
-LLM_PROVIDER=lm_studio
-OLLAMA_URL=http://localhost:11434/v1
-LM_STUDIO_MODEL=qwen/qwen3-coder-30b
-LM_STUDIO_VISION_MODEL=qwen/qwen3-vl-30b
-OLLAMA_MODEL=gemma4:26b
-OLLAMA_VISION_MODEL=qwen3-vl:30b
-```
+Base URL of the Ollama local server.
+
+#### `OLLAMA_TEXT_MODEL`
+
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `qwen3.6:latest` |
+
+Name of the text/code model pulled in Ollama. Used by the Generation and Healing pipelines.
+
+#### `OLLAMA_VISION_MODEL`
+
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `gemma4:26b` |
+
+Name of the vision model pulled in Ollama. Used by the Vision pipeline.
+
+---
+
+### Optional variables
+
+#### `LOG_LEVEL`
+
+| | |
+| --- | --- |
+| **Type** | String |
+| **Default** | `INFO` |
+| **Options** | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+
+Controls the verbosity of framework log output. Set to `DEBUG` for full LLM prompt/response traces. Third-party loggers (`httpx`, `openai._base_client`, `gradio`) are always suppressed below `WARNING` regardless of this setting.

@@ -25,7 +25,7 @@ from schemas.evaluation import BenchmarkRunConfig
 from src.utils.prompt_loader import get_prompt_hash, get_prompt_version
 
 config = BenchmarkRunConfig(
-    model="qwen3-coder-30b",           # model identifier
+    model="qwen3.6-35b-a3b",           # model identifier
     model_version="q4_k_m",            # quantization / fine-tune variant
     provider="lm_studio",              # "lm_studio" | "ollama"
     prompt_name="healer",              # which prompt file

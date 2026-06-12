@@ -191,23 +191,53 @@ jq '{failure_type, confidence_score, confidence_rationale, root_cause_evidence, 
 
 ---
 
-## Python Logging
+## Framework Logging
 
-All pipeline modules use the standard `logging` module with `getLogger(__name__)`. Enable debug output:
+The workbench uses a structured, colored logger configured in `src/utils/logger.py`. It is activated automatically at startup via `src/app.py`.
 
-```bash
-# All pipeline logging at DEBUG level
-PYTHONPATH=. uv run python -c "
-import logging
-logging.basicConfig(level=logging.DEBUG, format='%(name)s %(levelname)s: %(message)s')
-# ... run code ...
-"
+### Log format
+
+```text
+HH:MM:SS [LEVEL] module.name — message
 ```
 
-Key loggers:
+Levels are color-coded in the terminal: **WARN** in yellow, **ERROR** in red, **CRIT** in bold red. The `src.` prefix is stripped from logger names for readability (`src.llm.router` → `llm.router`).
 
-- `src.healing.planner` — LLM call, fallback decisions
-- `src.healing.repair` — AST strategy chosen, fallback warnings
-- `src.healing.classifier` — classification result
-- `src.llm.router` — retry logic, provider switching
-- `src.context.*` — context collection per module
+Third-party loggers (`httpx`, `openai._base_client`, `gradio`, `uvicorn.access`) are suppressed below `WARNING` — they do not appear during normal operation.
+
+### Adjusting verbosity
+
+Set `LOG_LEVEL` in `.env` before starting the app:
+
+```env
+LOG_LEVEL=DEBUG   # DEBUG | INFO | WARNING | ERROR
+```
+
+Or pass it inline:
+
+```bash
+LOG_LEVEL=DEBUG uv run python src/app.py
+```
+
+`DEBUG` shows full LLM response metadata (tokens, latency, model) and context collection details.
+
+### Key loggers
+
+- `llm.router` — retry attempts, provider fallback, per-call response metadata
+- `healing.planner` — LLM call, fallback decisions
+- `healing.repair` — AST strategy chosen, fallback warnings
+- `healing.classifier` — heuristic classification result
+- `healing.artifact_store` — artifact file written (relative path)
+- `context.*` — per-module context collection (DOM, accessibility, screenshot)
+- `agents.generator` — generation agent entry/exit
+
+### Running pipeline code outside the app
+
+If you call pipeline code directly (not through `src/app.py`), initialise the logger manually:
+
+```python
+from src.utils.logger import init_logging
+init_logging()
+# Now pipeline logging uses the colored formatter
+from src.healing.planner import analyze_and_plan
+```

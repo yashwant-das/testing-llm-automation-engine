@@ -171,8 +171,8 @@ class TestHealingDecisionFromAnalysis(unittest.TestCase):
         )
 
     def test_model_used_propagated(self):
-        d = self._decision(model_used="qwen3-coder-30b")
-        self.assertEqual(d.model_used, "qwen3-coder-30b")
+        d = self._decision(model_used="qwen3.6-35b-a3b")
+        self.assertEqual(d.model_used, "qwen3.6-35b-a3b")
 
     def test_prompt_version_propagated(self):
         d = self._decision(prompt_version="2")
@@ -249,7 +249,7 @@ class TestHealingDecisionToMarkdown(unittest.TestCase):
             test_file="tests/e2e/click.spec.ts",
             analysis=analysis,
             evidence=_minimal_evidence(),
-            model_used="qwen3-coder-30b",
+            model_used="qwen3.6-35b-a3b",
             prompt_version="2",
             prompt_hash="abc123",
             execution_duration_ms=1800,
@@ -262,7 +262,7 @@ class TestHealingDecisionToMarkdown(unittest.TestCase):
 
     def test_provenance_model_rendered(self):
         md = self._full_decision().to_markdown()
-        self.assertIn("qwen3-coder-30b", md)
+        self.assertIn("qwen3.6-35b-a3b", md)
 
     def test_provenance_prompt_version_and_hash(self):
         md = self._full_decision().to_markdown()

@@ -81,8 +81,12 @@ def generate_test_streaming(url: str, story: str) -> Iterator[tuple[str, str]]:
     tracer.end_session(trace_id, success=True)
 
     timeline += (
-        f"✅ Generation complete — {decision.line_count} lines"
-        f" · model={decision.model_used}\n\n"
+        f"✅ Generation complete — {decision.line_count} lines\n\n"
+        f"── Model ──────────────────────────────────────\n\n"
+        f"Provider : `{decision.provider}`  \n"
+        f"Model    : `{decision.model_used}`  \n"
+        f"Tokens   : {decision.input_tokens:,} in / {decision.output_tokens:,} out  \n"
+        f"Latency  : {decision.latency_ms:,} ms  \n\n"
     )
     yield timeline, decision.code
 

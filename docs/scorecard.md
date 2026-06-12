@@ -116,7 +116,7 @@
 - LM Studio and Ollama both supported via OpenAI-compatible endpoint
 - Provider selection via `LLM_PROVIDER` env var
 - Model names configurable via env vars
-- Default Ollama model: `gemma4:26b`
+- Default Ollama model: `qwen3.6:latest`
 - No model capability metadata
 - No fallback if local LLM is unavailable
 - No health check before session start

@@ -720,7 +720,7 @@ def run_generation_benchmark_ui(model_id: str = "") -> str:
 def get_model_info() -> str:
     """Return a markdown table of all models registered in ModelRegistry.
 
-    Reads the environment variables (``LM_STUDIO_MODEL``, ``OLLAMA_MODEL``, etc.)
+    Reads the environment variables (``LM_STUDIO_TEXT_MODEL``, ``OLLAMA_TEXT_MODEL``, etc.)
     and populates ModelRegistry.  Safe to call repeatedly — each call re-reads
     the environment so live config changes are reflected on refresh.
 
@@ -737,8 +737,8 @@ def get_model_info() -> str:
     if not models:
         return (
             "## Model Registry\n\n"
-            "*No models registered. Check that `LM_STUDIO_MODEL` / "
-            "`OLLAMA_MODEL` environment variables are set.*"
+            "*No models registered. Check that `LM_STUDIO_TEXT_MODEL` / "
+            "`OLLAMA_TEXT_MODEL` environment variables are set.*"
         )
 
     lines = [

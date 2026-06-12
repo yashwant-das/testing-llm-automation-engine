@@ -41,7 +41,11 @@ def emit_decision(decision: ProvenanceRecord, prefix: str) -> Path:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     path = ARTIFACTS_DIR / f"{prefix}_{timestamp}.json"
     path.write_text(decision.model_dump_json(indent=2), encoding="utf-8")
-    logger.info("Artifact saved: %s", path)
+    try:
+        display = path.relative_to(PROJECT_ROOT)
+    except ValueError:
+        display = path
+    logger.info("Artifact saved: %s", display)
     return path
 
 

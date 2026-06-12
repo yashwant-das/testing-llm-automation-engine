@@ -24,6 +24,8 @@ from playwright.sync_api import sync_playwright
 
 logger = logging.getLogger(__name__)
 
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 def _build_filename(url: str, tag: str) -> str:
     """Build a deterministic screenshot filename from url and tag."""
@@ -80,7 +82,11 @@ def capture_screenshot(
         page.screenshot(path=str(path))
         browser.close()
 
-    logger.info("Screenshot saved: %s", path)
+    try:
+        display = path.relative_to(_PROJECT_ROOT)
+    except ValueError:
+        display = path
+    logger.info("Screenshot saved: %s", display)
     return str(path)
 
 
@@ -110,5 +116,9 @@ def capture_from_page(
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / _build_filename(url, tag)
     page.screenshot(path=str(path))
-    logger.info("Screenshot saved: %s", path)
+    try:
+        display = path.relative_to(_PROJECT_ROOT)
+    except ValueError:
+        display = path
+    logger.info("Screenshot saved: %s", display)
     return str(path)

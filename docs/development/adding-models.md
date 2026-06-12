@@ -79,7 +79,7 @@ The default router is configured at first call to `get_default_router()` via `_b
 
 ```env
 # Switch to a different Ollama model
-OLLAMA_MODEL=llama3.3:70b
+OLLAMA_TEXT_MODEL=llama3.3:70b
 ```
 
 The new model is picked up on the next cold start (or after restarting the app).

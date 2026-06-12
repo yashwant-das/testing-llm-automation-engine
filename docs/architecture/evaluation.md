@@ -119,7 +119,7 @@ Every run is recorded as a `BenchmarkRun`:
 
 ```python
 class BenchmarkRunConfig(BaseModel):
-    model: str               # e.g. "qwen3-coder-30b"
+    model: str               # e.g. "qwen3.6-35b-a3b"
     model_version: Optional[str]
     provider: str            # "lm_studio" | "ollama"
     prompt_name: str         # e.g. "healer"

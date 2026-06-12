@@ -189,7 +189,7 @@ class HealingDecision(BaseModel):
     timestamp: str
 
     # Phase 9: Explainability provenance (all default to empty/0 for backward compat)
-    model_used: str                  # e.g. "qwen3-coder-30b"
+    model_used: str                  # e.g. "qwen3.6-35b-a3b"
     prompt_version: str              # from prompts/manifest.json, e.g. "2"
     prompt_hash: str                 # SHA-256 first 16 chars of healer.md
     confidence_rationale: str        # LLM's explanation of confidence level

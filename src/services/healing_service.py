@@ -14,6 +14,8 @@ import shutil
 from pathlib import Path
 from typing import Iterator, Optional
 
+from src.utils.formatting import format_healing_result
+
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -271,8 +273,34 @@ def heal_test_streaming(
 
         if decision.verification_passed:
             _tracer.end_session(_trace_id, success=True)
+            fail_type = (
+                decision.failure_type.value
+                if hasattr(decision.failure_type, "value")
+                else str(decision.failure_type)
+            )
+            repair_strategy = (
+                decision.action_taken.repair_strategy.value
+                if hasattr(decision.action_taken.repair_strategy, "value")
+                else str(decision.action_taken.repair_strategy)
+            )
+            result_text = format_healing_result(
+                success=True,
+                attempt=attempt_num,
+                max_retries=int(max_retries),
+                failure_type=fail_type,
+                confidence=decision.confidence_score,
+                strategy=repair_strategy,
+                hypothesis=decision.hypothesis,
+                metadata={
+                    "provider": decision.provider or "",
+                    "model": decision.model_used or "",
+                    "input_tokens": decision.input_tokens or 0,
+                    "output_tokens": decision.output_tokens or 0,
+                    "latency_ms": decision.latency_ms or 0,
+                },
+            )
             yield (
-                f"SUCCESS: Test healed!\nReasoning: {decision.hypothesis}",
+                result_text,
                 decision.to_markdown(),
                 timeline_md,
                 decision.to_dict(),
@@ -290,11 +318,40 @@ def heal_test_streaming(
     timeline_md += f"❌ All {max_retries} attempts exhausted — healing failed\n\n"
     _tracer.end_session(_trace_id, success=False)
 
-    md_report = (
-        latest_decision.to_markdown() if latest_decision else "### Healing Failed"
-    )
+    if latest_decision:
+        fail_type = (
+            latest_decision.failure_type.value
+            if hasattr(latest_decision.failure_type, "value")
+            else str(latest_decision.failure_type)
+        )
+        repair_strategy = (
+            latest_decision.action_taken.repair_strategy.value
+            if hasattr(latest_decision.action_taken.repair_strategy, "value")
+            else str(latest_decision.action_taken.repair_strategy)
+        )
+        result_text = format_healing_result(
+            success=False,
+            attempt=int(max_retries),
+            max_retries=int(max_retries),
+            failure_type=fail_type,
+            confidence=latest_decision.confidence_score,
+            strategy=repair_strategy,
+            hypothesis=latest_decision.hypothesis,
+            metadata={
+                "provider": latest_decision.provider or "",
+                "model": latest_decision.model_used or "",
+                "input_tokens": latest_decision.input_tokens or 0,
+                "output_tokens": latest_decision.output_tokens or 0,
+                "latency_ms": latest_decision.latency_ms or 0,
+            },
+        )
+        md_report = latest_decision.to_markdown()
+    else:
+        result_text = "❌ HEALING FAILED\n\nNo repair was applied."
+        md_report = "### Healing Failed"
+
     yield (
-        "Healing failed to make test pass.",
+        result_text,
         md_report,
         timeline_md,
         latest_decision.to_dict() if latest_decision else None,

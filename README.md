@@ -95,20 +95,31 @@ npx playwright install
 
 ### Configure LLM
 
-Create a `.env` file:
+Copy `.env.example` to `.env` and activate **one** provider:
+
+```bash
+cp .env.example .env
+```
+
+**LM Studio** (default):
 
 ```env
-# For LM Studio (default)
 LLM_PROVIDER=lm_studio
 LM_STUDIO_URL=http://localhost:1234/v1
-LM_STUDIO_MODEL=your-model-name
-LM_STUDIO_VISION_MODEL=your-vision-model-name
+LM_STUDIO_TEXT_MODEL=qwen/qwen3.6-35b-a3b
+LM_STUDIO_VISION_MODEL=google/gemma-4-26b-a4b
+```
 
-# For Ollama
+**Ollama** — set `LLM_PROVIDER=ollama` and uncomment the Ollama lines in `.env`:
+
+```env
 LLM_PROVIDER=ollama
 OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=qwen3-coder:30b
+OLLAMA_TEXT_MODEL=qwen3.6:latest
+OLLAMA_VISION_MODEL=gemma4:26b
 ```
+
+Only one provider is active at a time. Full variable reference: [docs/env-variables.md](docs/env-variables.md)
 
 ### Run
 
@@ -167,7 +178,7 @@ Load and inspect `logs/traces.jsonl`. Displays three tables — session spans, L
 
 ### Models
 
-Displays active model configuration from environment variables (`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, `OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`) alongside capability metadata from the `ModelRegistry`. Click **Refresh** to reload.
+Displays active model configuration from environment variables (`LM_STUDIO_TEXT_MODEL`, `LM_STUDIO_VISION_MODEL`, `OLLAMA_TEXT_MODEL`, `OLLAMA_VISION_MODEL`) alongside capability metadata from the `ModelRegistry`. Click **Refresh** to reload.
 
 ---
 
@@ -329,7 +340,7 @@ print(f'{run.passed}/{run.total} passed ({run.pass_rate*100:.0f}%)')
 Every healing session writes spans to `logs/traces.jsonl`:
 
 ```jsonl
-{"span_type":"llm","trace_id":"a1b2...","model":"qwen3-coder-30b","input_tokens":4821,"output_tokens":312,"latency_ms":3400,"retry_count":0}
+{"span_type":"llm","trace_id":"a1b2...","model":"qwen3.6-35b-a3b","input_tokens":4821,"output_tokens":312,"latency_ms":3400,"retry_count":0}
 {"span_type":"subprocess","trace_id":"a1b2...","command":"npx playwright test ...","exit_code":0,"latency_ms":7100}
 {"span_type":"session","trace_id":"a1b2...","session_type":"healing","llm_call_count":1,"total_input_tokens":4821,"total_latency_ms":12600,"success":true}
 ```

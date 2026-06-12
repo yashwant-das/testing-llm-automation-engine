@@ -202,8 +202,12 @@ def analyze_visual_streaming(
     tracer.end_session(trace_id, success=True)
 
     timeline += (
-        f"✅ Generation complete — {result.line_count} lines"
-        f" · model={llm_response.model_used}\n\n"
+        f"✅ Generation complete — {result.line_count} lines\n\n"
+        f"── Model ──────────────────────────────────────\n\n"
+        f"Provider : `{llm_response.provider}`  \n"
+        f"Model    : `{llm_response.model_used}`  \n"
+        f"Tokens   : {llm_response.input_tokens:,} in / {llm_response.output_tokens:,} out  \n"
+        f"Latency  : {llm_response.latency_ms:,} ms  \n\n"
     )
     yield timeline, screenshot_path, result.code
 

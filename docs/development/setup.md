@@ -33,35 +33,46 @@ npx playwright install
 
 ## Step 2: Configure LLM
 
-Create a `.env` file in the project root. The project reads environment variables via the `LLMClientFactory` at call time (no reload required after changes).
+Copy `.env.example` to `.env` and activate **one** provider.
 
-### LM Studio
+```bash
+cp .env.example .env
+```
+
+### Using LM Studio
+
+Edit `.env`:
 
 ```env
 LLM_PROVIDER=lm_studio
 LM_STUDIO_URL=http://localhost:1234/v1
-LM_STUDIO_MODEL=qwen3-coder-30b
-LM_STUDIO_VISION_MODEL=qwen2.5-vl-7b
-LM_STUDIO_API_KEY=lm-studio
+LM_STUDIO_TEXT_MODEL=qwen/qwen3.6-35b-a3b
+LM_STUDIO_VISION_MODEL=google/gemma-4-26b-a4b
 ```
 
-Start LM Studio, load a text/code model and a vision model, start the local server. The default port is 1234.
+Start LM Studio, load a text/code model and a vision model, then start the local server (default port 1234).
 
-### Ollama
+### Using Ollama
+
+Edit `.env` — set the provider and uncomment the Ollama section:
 
 ```env
 LLM_PROVIDER=ollama
-OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=qwen3-coder:30b
-OLLAMA_VISION_MODEL=llava:13b
-OLLAMA_API_KEY=ollama
+
+# OLLAMA_URL=http://localhost:11434/v1      ← uncomment and fill in
+# OLLAMA_TEXT_MODEL=qwen3.6:latest
+# OLLAMA_VISION_MODEL=gemma4:26b
 ```
 
 ```bash
-ollama pull qwen3-coder:30b
-ollama pull llava:13b
+ollama pull qwen3.6:latest
+ollama pull gemma4:26b
 ollama serve
 ```
+
+> **Only one provider is active at a time.** The `LLM_PROVIDER` value determines which set of variables is read. Variables for the inactive provider are ignored.
+
+The `.env` file is loaded automatically at startup. No environment export or shell restart is needed.
 
 ---
 
@@ -96,11 +107,11 @@ uv run python src/app.py
 
 ## Troubleshooting
 
-### "LLM connection refused"
+### "LLM connection refused" or "Connection error"
 
-- Verify LM Studio or Ollama is running
-- Check that `LM_STUDIO_URL` / `OLLAMA_URL` matches the server address
-- Verify the model is loaded and the server is started in LM Studio
+- Verify the active provider (`LLM_PROVIDER`) is actually running
+- Check that the `*_URL` for the active provider matches the server address
+- If the error says `model=qwen/qwen3.6-35b-a3b` but you configured a different model, the `.env` is not being picked up — ensure you ran `cp .env.example .env` and the file exists in the project root
 
 ### "npx playwright test: command not found"
 
@@ -132,14 +143,16 @@ node scripts/ast_repair.js  # should print usage, not an error
 
 ## Environment Variables Reference
 
-| Variable | Required | Default | Description |
+| Variable | Active when | Default | Description |
 | --- | --- | --- | --- |
-| `LLM_PROVIDER` | Yes | — | `"lm_studio"` or `"ollama"` |
-| `LM_STUDIO_URL` | If lm_studio | `http://localhost:1234/v1` | LM Studio server URL |
-| `LM_STUDIO_MODEL` | If lm_studio | — | Text/code model name |
-| `LM_STUDIO_VISION_MODEL` | If lm_studio | — | Vision model name |
-| `LM_STUDIO_API_KEY` | No | `"lm-studio"` | Any non-empty string |
-| `OLLAMA_URL` | If ollama | `http://localhost:11434/v1` | Ollama server URL |
-| `OLLAMA_MODEL` | If ollama | `"gemma4:26b"` | Text/code model name |
-| `OLLAMA_VISION_MODEL` | If ollama | — | Vision model name |
-| `OLLAMA_API_KEY` | No | `"ollama"` | Any non-empty string |
+| `LLM_PROVIDER` | always | `lm_studio` | `"lm_studio"` or `"ollama"` |
+| `LM_STUDIO_URL` | lm_studio | `http://localhost:1234/v1` | LM Studio server URL |
+| `LM_STUDIO_TEXT_MODEL` | lm_studio | `qwen/qwen3.6-35b-a3b` | Text/code model name |
+| `LM_STUDIO_VISION_MODEL` | lm_studio | `google/gemma-4-26b-a4b` | Vision model name |
+| `LM_STUDIO_API_KEY` | lm_studio | `lm-studio` | Any non-empty string |
+| `OLLAMA_URL` | ollama | `http://localhost:11434/v1` | Ollama server URL |
+| `OLLAMA_TEXT_MODEL` | ollama | `qwen3.6:latest` | Text/code model name |
+| `OLLAMA_VISION_MODEL` | ollama | `gemma4:26b` | Vision model name |
+| `LOG_LEVEL` | always | `INFO` | `DEBUG` · `INFO` · `WARNING` · `ERROR` |
+
+Full variable descriptions: [docs/env-variables.md](../env-variables.md)

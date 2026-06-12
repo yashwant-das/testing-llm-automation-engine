@@ -235,7 +235,7 @@ class HealingDecision(BaseModel):
     context_snapshot_id: str         # SHA-256 of error_log — identifies the evidence
 
     # Using which model and prompt
-    model_used: str                  # "qwen3-coder-30b"
+    model_used: str                  # "qwen3.6-35b-a3b"
     prompt_version: str              # "2" (from manifest.json)
     prompt_hash: str                 # SHA-256 of healer.md content
     execution_duration_ms: int       # Wall-clock time for the planning call

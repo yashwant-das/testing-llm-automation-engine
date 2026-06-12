@@ -237,7 +237,7 @@ class TestGetModelInfo(unittest.TestCase):
             return get_model_info()
 
     def test_returns_markdown_table(self):
-        md = self._get({})
+        md = self._get({"LM_STUDIO_TEXT_MODEL": "some-model"})
         self.assertIn("| Model ID |", md)
         self.assertIn("| --- |", md)
 
@@ -246,7 +246,7 @@ class TestGetModelInfo(unittest.TestCase):
         self.assertIn("## Model Registry", md)
 
     def test_lists_lm_studio_model(self):
-        md = self._get({"LM_STUDIO_MODEL": "my-text-model"})
+        md = self._get({"LM_STUDIO_TEXT_MODEL": "my-text-model"})
         self.assertIn("my-text-model", md)
 
     def test_lists_lm_studio_vision_model(self):
@@ -254,32 +254,36 @@ class TestGetModelInfo(unittest.TestCase):
         self.assertIn("my-vision-model", md)
 
     def test_lists_ollama_model(self):
-        md = self._get({"OLLAMA_MODEL": "gemma4:26b"})
+        md = self._get({"OLLAMA_TEXT_MODEL": "gemma4:26b"})
         self.assertIn("gemma4:26b", md)
 
     def test_vision_capable_shows_checkmark(self):
-        md = self._get({})
-        # At least one vision model should be registered → at least one ✅
+        md = self._get({"LM_STUDIO_VISION_MODEL": "my-vision-model"})
         self.assertIn("✅", md)
 
     def test_non_vision_model_shows_dash(self):
-        md = self._get({})
-        # Text-only models should show — for the vision column
+        # A text-only model must be distinct from the vision model so it gets
+        # its own row with is_vision_capable=False.
+        md = self._get(
+            {
+                "LM_STUDIO_TEXT_MODEL": "text-only-model",
+                "LM_STUDIO_VISION_MODEL": "vision-model",
+            }
+        )
         self.assertIn(" — ", md)
 
     def test_provider_column_present(self):
-        md = self._get({})
+        md = self._get({"LM_STUDIO_TEXT_MODEL": "some-model"})
         self.assertIn("lm_studio", md)
 
     def test_model_count_footer(self):
-        md = self._get({})
-        # Should end with "N model(s) registered."
+        md = self._get({"LM_STUDIO_TEXT_MODEL": "some-model"})
         self.assertIn("model(s) registered", md)
 
     def test_refresh_re_reads_env(self):
         """Calling get_model_info() twice with different env reflects changes."""
-        md1 = self._get({"LM_STUDIO_MODEL": "model-alpha"})
-        md2 = self._get({"LM_STUDIO_MODEL": "model-beta"})
+        md1 = self._get({"LM_STUDIO_TEXT_MODEL": "model-alpha"})
+        md2 = self._get({"LM_STUDIO_TEXT_MODEL": "model-beta"})
         self.assertIn("model-alpha", md1)
         self.assertIn("model-beta", md2)
         self.assertNotIn("model-alpha", md2)

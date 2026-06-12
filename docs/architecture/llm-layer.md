@@ -80,7 +80,7 @@ router.complete_vision(
 ) -> LLMResponse
 ```
 
-`complete_primary()` uses the text/code model. `complete_vision()` uses the vision model (configured separately via `LM_STUDIO_VISION_MODEL` / `OLLAMA_VISION_MODEL`).
+`complete_primary()` uses the text/code model (`LM_STUDIO_TEXT_MODEL` / `OLLAMA_TEXT_MODEL`). `complete_vision()` uses the vision model (`LM_STUDIO_VISION_MODEL` / `OLLAMA_VISION_MODEL`).
 
 ### LLMResponse
 
@@ -108,16 +108,16 @@ All fields are consumed by the observability layer (`record_llm_response()`) and
 Providers are configured via environment variables. `LLMClientFactory.create(config)` reads them at call time (not import time):
 
 ```env
-LLM_PROVIDER=lm_studio          # or "ollama"
+LLM_PROVIDER=lm_studio          # or "ollama" — only one is active at a time
 LM_STUDIO_URL=http://localhost:1234/v1
-LM_STUDIO_MODEL=qwen3-coder-30b
-LM_STUDIO_VISION_MODEL=qwen2.5-vl-7b
+LM_STUDIO_TEXT_MODEL=qwen/qwen3.6-35b-a3b
+LM_STUDIO_VISION_MODEL=google/gemma-4-26b-a4b
 LM_STUDIO_API_KEY=lm-studio     # any non-empty string
 
-OLLAMA_URL=http://localhost:11434/v1
-OLLAMA_MODEL=qwen3-coder:30b
-OLLAMA_VISION_MODEL=llava:13b
-OLLAMA_API_KEY=ollama
+# Uncomment below and set LLM_PROVIDER=ollama to switch
+# OLLAMA_URL=http://localhost:11434/v1
+# OLLAMA_TEXT_MODEL=qwen3.6:latest
+# OLLAMA_VISION_MODEL=gemma4:26b
 ```
 
 Both providers speak the OpenAI REST API (`/v1/chat/completions`). The same `openai.OpenAI(base_url=..., api_key=...)` client handles both. This is why LiteLLM was not needed — see ADR-007.

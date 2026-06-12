@@ -22,19 +22,20 @@ import logging
 import sys
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.append(str(PROJECT_ROOT))
 
+load_dotenv(PROJECT_ROOT / ".env")
+
 import gradio as gr
 
 from src.observability import configure_tracer
+from src.utils.logger import init_logging
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    handlers=[logging.StreamHandler(sys.stdout)],
-)
+init_logging()
 logger = logging.getLogger(__name__)
 
 # Activate the JSONL tracer so every pipeline run writes spans to logs/traces.jsonl.
@@ -141,7 +142,7 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                     story_in = gr.Textbox(
                         label="Test Scenario",
                         placeholder="Describe the test scenario...",
-                        value="Login with tomsmith and SuperSecretPassword!. Verify success message.",
+                        value="TC-AUTH-001: Verify that a registered user can authenticate using valid credentials and is redirected to the secure area.",
                         lines=3,
                     )
                     with gr.Row():
@@ -234,7 +235,7 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                     v_story_in = gr.Textbox(
                         label="Instruction",
                         placeholder="Describe the action to perform...",
-                        value="Login with standard_user / secret_sauce",
+                        value="TC-AUTH-001: Verify that standard_user can log in with valid credentials and land on the product inventory page.",
                         lines=2,
                     )
                     with gr.Row():
@@ -248,18 +249,18 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
 
                 with gr.Column(scale=5):
                     with gr.Tabs():
-                        with gr.Tab("Screenshot"):
-                            v_image_preview = gr.Image(
-                                label="Captured Screenshot",
-                                type="filepath",
-                                interactive=False,
-                            )
                         with gr.Tab("Generated Code"):
                             v_code_out = gr.Code(
                                 label="TypeScript",
                                 language="typescript",
                                 lines=20,
                                 elem_classes=["tall-code"],
+                            )
+                        with gr.Tab("Screenshot"):
+                            v_image_preview = gr.Image(
+                                label="Captured Screenshot",
+                                type="filepath",
+                                interactive=False,
                             )
                         with gr.Tab("Execution Logs"):
                             v_result_out = gr.Textbox(
@@ -419,8 +420,8 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
         with gr.Tab("Models"):
             gr.Markdown(
                 "Active models read from environment variables "
-                "(`LM_STUDIO_MODEL`, `LM_STUDIO_VISION_MODEL`, "
-                "`OLLAMA_MODEL`, `OLLAMA_VISION_MODEL`).  "
+                "(`LM_STUDIO_TEXT_MODEL`, `LM_STUDIO_VISION_MODEL`, "
+                "`OLLAMA_TEXT_MODEL`, `OLLAMA_VISION_MODEL`).  "
                 "Shows capability metadata registered in `ModelRegistry`."
             )
             with gr.Row():
@@ -456,4 +457,8 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
     )
 
 if __name__ == "__main__":
-    demo.launch(theme=gr.themes.Default(), css=css)
+    demo.launch(
+        theme=gr.themes.Default(),
+        css=css,
+        allowed_paths=[str(PROJECT_ROOT / "tests" / "screenshots")],
+    )

@@ -37,7 +37,7 @@ Written by `LLMRouter._build_response()` after every successful LLM call:
   "span_type": "llm",
   "trace_id": "a1b2c3d4-e5f6-...",
   "operation_id": "uuid4",
-  "model": "qwen3-coder-30b",
+  "model": "qwen3.6-35b-a3b",
   "model_version": "",
   "prompt_version": "2",
   "prompt_hash": "abc123def456abcd",

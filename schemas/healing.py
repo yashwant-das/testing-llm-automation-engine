@@ -399,11 +399,13 @@ class HealingDecision(ProvenanceRecord):
 
 ## Code Change
 
+### Before
 ```typescript
-// OLD
 {self.action_taken.original_code}
+```
 
-// NEW
+### After
+```typescript
 {self.action_taken.fixed_code}
 ```
 

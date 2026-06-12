@@ -17,6 +17,7 @@ import os
 import time
 from typing import Optional
 
+from dotenv import load_dotenv
 from openai import OpenAI
 from pydantic import BaseModel, Field
 
@@ -118,7 +119,7 @@ class LLMRouter:
     ) -> None:
         self._primary_config = primary_config
         self._primary_model = primary_model
-        self._vision_model = vision_model or primary_model
+        self._vision_model = vision_model  # None means "not configured"
         self._fallback_config = fallback_config
         self._fallback_model = fallback_model
         self._retry_policy = retry_policy or RetryPolicy()
@@ -138,13 +139,8 @@ class LLMRouter:
         return self._primary_model
 
     @property
-    def vision_model(self) -> str:
-        """Vision model identifier for the primary provider."""
-        if self._vision_model == self._primary_model and self._vision_model:
-            logger.debug(
-                "No dedicated vision_model configured; using primary_model '%s' for vision calls.",
-                self._primary_model,
-            )
+    def vision_model(self) -> Optional[str]:
+        """Vision model identifier for the primary provider, or None if not configured."""
         return self._vision_model
 
     @property
@@ -310,7 +306,23 @@ class LLMRouter:
 
         Returns:
             LLMResponse.
+
+        Raises:
+            ValueError: If the vision model env var is not set.
         """
+        if not self._vision_model:
+            provider = self._primary_config.name
+            var = (
+                "OLLAMA_VISION_MODEL"
+                if provider == "ollama"
+                else "LM_STUDIO_VISION_MODEL"
+            )
+            raise ValueError(
+                f"Configuration error: {var} is not set.\n\n"
+                f"Add it to your .env file:\n\n"
+                f"  {var}=your-vision-model-name\n\n"
+                f"See docs/env-variables.md for the full reference."
+            )
         return self.complete(
             LLMRequest(
                 messages=messages,
@@ -387,8 +399,8 @@ class LLMRouter:
     def from_env(cls) -> "LLMRouter":
         """Build a router from environment variables.
 
-        Reads: LLM_PROVIDER, LM_STUDIO_URL, LM_STUDIO_MODEL, LM_STUDIO_VISION_MODEL,
-               OLLAMA_URL, OLLAMA_MODEL, OLLAMA_VISION_MODEL.
+        Reads: LLM_PROVIDER, LM_STUDIO_URL, LM_STUDIO_TEXT_MODEL, LM_STUDIO_VISION_MODEL,
+               OLLAMA_URL, OLLAMA_TEXT_MODEL, OLLAMA_VISION_MODEL.
 
         No fallback is configured by default; callers can construct the router
         directly if they need explicit fallback configuration.
@@ -396,15 +408,30 @@ class LLMRouter:
         Returns:
             Configured LLMRouter instance.
         """
+        from pathlib import Path
+
+        load_dotenv(Path(__file__).resolve().parent.parent.parent / ".env")
+
         provider = os.getenv("LLM_PROVIDER", "lm_studio").lower()
         primary_config = ProviderConfig.from_env(provider)
 
         if provider == "ollama":
-            primary_model = os.getenv("OLLAMA_MODEL", "gemma4:26b")
-            vision_model = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:30b")
+            text_var, vision_var = "OLLAMA_TEXT_MODEL", "OLLAMA_VISION_MODEL"
         else:
-            primary_model = os.getenv("LM_STUDIO_MODEL", "qwen/qwen3-coder-30b")
-            vision_model = os.getenv("LM_STUDIO_VISION_MODEL", "qwen/qwen3-vl-30b")
+            text_var, vision_var = "LM_STUDIO_TEXT_MODEL", "LM_STUDIO_VISION_MODEL"
+
+        primary_model = os.getenv(text_var)
+        vision_model = os.getenv(
+            vision_var
+        )  # None is valid — only needed for Vision pipeline
+
+        if not primary_model:
+            raise ValueError(
+                f"Configuration error: {text_var} is not set.\n\n"
+                f"Add it to your .env file:\n\n"
+                f"  {text_var}=your-model-name\n\n"
+                f"See docs/env-variables.md for the full reference."
+            )
 
         return cls(
             primary_config=primary_config,

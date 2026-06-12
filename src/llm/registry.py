@@ -38,7 +38,7 @@ class ModelRegistry:
 
     Usage:
         ModelRegistry.from_env()                    # populate from environment
-        caps = ModelRegistry.get("qwen/qwen3-coder-30b")
+        caps = ModelRegistry.get("qwen/qwen3.6-35b-a3b")
         all_models = ModelRegistry.all_models()
     """
 
@@ -98,43 +98,47 @@ class ModelRegistry:
         Returns:
             The ModelRegistry class (populated in place).
         """
-        lm_studio_model = os.getenv("LM_STUDIO_MODEL", "qwen/qwen3-coder-30b")
-        lm_studio_vision = os.getenv("LM_STUDIO_VISION_MODEL", "qwen/qwen3-vl-30b")
-        ollama_model = os.getenv("OLLAMA_MODEL", "gemma4:26b")
-        ollama_vision = os.getenv("OLLAMA_VISION_MODEL", "qwen3-vl:30b")
+        lm_studio_model = os.getenv("LM_STUDIO_TEXT_MODEL")
+        lm_studio_vision = os.getenv("LM_STUDIO_VISION_MODEL")
+        ollama_model = os.getenv("OLLAMA_TEXT_MODEL")
+        ollama_vision = os.getenv("OLLAMA_VISION_MODEL")
 
-        cls.register(
-            ModelCapabilities(
-                model_id=lm_studio_model,
-                provider="lm_studio",
-                is_vision_capable=False,
-                description="LM Studio primary text model",
+        if lm_studio_model:
+            cls.register(
+                ModelCapabilities(
+                    model_id=lm_studio_model,
+                    provider="lm_studio",
+                    is_vision_capable=False,
+                    description="LM Studio primary text model",
+                )
             )
-        )
-        cls.register(
-            ModelCapabilities(
-                model_id=lm_studio_vision,
-                provider="lm_studio",
-                is_vision_capable=True,
-                description="LM Studio vision model",
+        if lm_studio_vision:
+            cls.register(
+                ModelCapabilities(
+                    model_id=lm_studio_vision,
+                    provider="lm_studio",
+                    is_vision_capable=True,
+                    description="LM Studio vision model",
+                )
             )
-        )
-        cls.register(
-            ModelCapabilities(
-                model_id=ollama_model,
-                provider="ollama",
-                is_vision_capable=False,
-                description="Ollama primary text model",
+        if ollama_model:
+            cls.register(
+                ModelCapabilities(
+                    model_id=ollama_model,
+                    provider="ollama",
+                    is_vision_capable=False,
+                    description="Ollama primary text model",
+                )
             )
-        )
-        cls.register(
-            ModelCapabilities(
-                model_id=ollama_vision,
-                provider="ollama",
-                is_vision_capable=True,
-                description="Ollama vision model",
+        if ollama_vision:
+            cls.register(
+                ModelCapabilities(
+                    model_id=ollama_vision,
+                    provider="ollama",
+                    is_vision_capable=True,
+                    description="Ollama vision model",
+                )
             )
-        )
 
         logger.debug(
             "ModelRegistry populated with %d models from environment", len(cls._models)

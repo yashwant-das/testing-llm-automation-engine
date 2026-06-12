@@ -5,7 +5,7 @@ Each span is written as a single JSON line so the file is valid JSONL
 and can be processed with ``jq``, ``grep``, or any streaming parser.
 
 Example output line:
-    {"span_type": "llm", "trace_id": "a1b2c3d4...", "model": "qwen3-coder-30b", ...}
+    {"span_type": "llm", "trace_id": "a1b2c3d4...", "model": "qwen3.6-35b-a3b", ...}
 
 Usage:
     writer = TraceWriter(Path("logs/traces.jsonl"))

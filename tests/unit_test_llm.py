@@ -289,9 +289,9 @@ class TestModelRegistry(unittest.TestCase):
         with patch.dict(
             "os.environ",
             {
-                "LM_STUDIO_MODEL": "test-text",
+                "LM_STUDIO_TEXT_MODEL": "test-text",
                 "LM_STUDIO_VISION_MODEL": "test-vision",
-                "OLLAMA_MODEL": "ollama-text",
+                "OLLAMA_TEXT_MODEL": "ollama-text",
                 "OLLAMA_VISION_MODEL": "ollama-vision",
             },
         ):
@@ -649,7 +649,7 @@ class TestLLMRouterFromEnv(unittest.TestCase):
             "os.environ",
             {
                 "LLM_PROVIDER": "lm_studio",
-                "LM_STUDIO_MODEL": "test-text",
+                "LM_STUDIO_TEXT_MODEL": "test-text",
                 "LM_STUDIO_VISION_MODEL": "test-vision",
             },
         ):
@@ -663,7 +663,7 @@ class TestLLMRouterFromEnv(unittest.TestCase):
             "os.environ",
             {
                 "LLM_PROVIDER": "ollama",
-                "OLLAMA_MODEL": "ollama-text",
+                "OLLAMA_TEXT_MODEL": "ollama-text",
                 "OLLAMA_VISION_MODEL": "ollama-vision",
             },
         ):
@@ -671,6 +671,53 @@ class TestLLMRouterFromEnv(unittest.TestCase):
 
         self.assertEqual(router.primary_model, "ollama-text")
         self.assertEqual(router.vision_model, "ollama-vision")
+
+    def test_from_env_vision_model_optional(self):
+        """Vision model missing → router builds fine; vision_model is None."""
+        env = {"LLM_PROVIDER": "lm_studio", "LM_STUDIO_TEXT_MODEL": "text-only"}
+        with (
+            patch("src.llm.router.load_dotenv"),
+            patch.dict("os.environ", env, clear=False),
+        ):
+            import os as _os
+
+            saved = _os.environ.pop("LM_STUDIO_VISION_MODEL", None)
+            try:
+                router = LLMRouter.from_env()
+            finally:
+                if saved is not None:
+                    _os.environ["LM_STUDIO_VISION_MODEL"] = saved
+
+        self.assertEqual(router.primary_model, "text-only")
+        self.assertIsNone(router.vision_model)
+
+    def test_from_env_missing_text_model_raises(self):
+        """Missing text model env var → clear ValueError with guidance."""
+        env = {"LLM_PROVIDER": "lm_studio"}
+        with (
+            patch("src.llm.router.load_dotenv"),
+            patch.dict("os.environ", env, clear=False),
+        ):
+            import os as _os
+
+            saved = _os.environ.pop("LM_STUDIO_TEXT_MODEL", None)
+            try:
+                with self.assertRaises(ValueError) as ctx:
+                    LLMRouter.from_env()
+            finally:
+                if saved is not None:
+                    _os.environ["LM_STUDIO_TEXT_MODEL"] = saved
+
+        self.assertIn("LM_STUDIO_TEXT_MODEL", str(ctx.exception))
+        self.assertIn(".env", str(ctx.exception))
+
+    def test_complete_vision_raises_when_model_not_configured(self):
+        """complete_vision() raises ValueError if vision model is not set."""
+        router = _make_router(primary_model="text-model", vision_model=None)
+        with self.assertRaises(ValueError) as ctx:
+            router.complete_vision(messages=[])
+        self.assertIn("LM_STUDIO_VISION_MODEL", str(ctx.exception))
+        self.assertIn(".env", str(ctx.exception))
 
 
 # ---------------------------------------------------------------------------
@@ -712,7 +759,7 @@ class TestGetDefaultRouter(unittest.TestCase):
         # Pin LLM_PROVIDER so the .env file's value doesn't interfere.
         with patch.dict(
             "os.environ",
-            {"LLM_PROVIDER": "lm_studio", "LM_STUDIO_MODEL": "env-test-model"},
+            {"LLM_PROVIDER": "lm_studio", "LM_STUDIO_TEXT_MODEL": "env-test-model"},
         ):
             _reset_default_router_for_testing()
             router = get_default_router()
