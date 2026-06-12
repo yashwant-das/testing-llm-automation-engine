@@ -21,16 +21,16 @@ The architecture is designed around three constraints:
 
 ```text
 ┌─────────────────────────────────────────────────────────────────────┐
-│                          Gradio UI (src/app.py)                      │
-│  8 tabs — Overview | Generation | Healing | Vision | Artifacts |     │
-│           Evaluation | Traces | Models                               │
+│                          Gradio UI (src/app.py)                     │
+│  8 tabs — Overview | Generation | Healing | Vision | Artifacts |    │
+│           Evaluation | Traces | Models                              │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │ imports only from src/services/
 ┌──────────────────────────▼──────────────────────────────────────────┐
-│                        Service Layer (src/services/)                  │
-│  generation_service  healing_service  vision_service  workbench_service│
-└──────┬──────────────────┬──────────────────┬────────────────────────┘
-       │                  │                  │
+│                        Service Layer (src/services/)                │
+│  generation_service healing_service vision_service workbench_service│
+└──────┬──────────────────┬─────────────────┬─────────────────────────┘
+       │                  │                 │
 ┌──────▼──────┐  ┌────────▼──────┐  ┌───────▼──────────────────────┐
 │ src/agents/ │  │ src/healing/  │  │ src/context/                 │
 │ generator   │  │ runner        │  │ collector → dom              │
@@ -42,16 +42,16 @@ The architecture is designed around three constraints:
        │         │ artifact_store│  └──────────────────────────────┘
        │         └────────┬──────┘
        │                  │
-┌──────▼──────────────────▼──────────────────────────────────────────┐
-│                     LLM Layer (src/llm/)                             │
+┌──────▼──────────────────▼───────────────────────────────────────────┐
+│                     LLM Layer (src/llm/)                            │
 │  LLMRouter → retry → fallback → LLMClientFactory → OpenAI SDK       │
-│  LLMRequest / LLMResponse (Pydantic)                                 │
-└──────────────────────────┬─────────────────────────────────────────┘
+│  LLMRequest / LLMResponse (Pydantic)                                │
+└──────────────────────────┬──────────────────────────────────────────┘
                            │ instrument every call
-┌──────────────────────────▼─────────────────────────────────────────┐
-│               Observability Layer (src/observability/)               │
-│  Tracer (thread-local) → TraceWriter → logs/traces.jsonl             │
-└────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────▼──────────────────────────────────────────┐
+│               Observability Layer (src/observability/)              │
+│  Tracer (thread-local) → TraceWriter → logs/traces.jsonl            │
+└─────────────────────────────────────────────────────────────────────┘
 
 Schemas (schemas/)  ←── data contracts between all layers (Pydantic)
 Benchmarks (benchmarks/)  ←── evaluation runners (read-only, no I/O side effects)

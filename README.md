@@ -47,24 +47,27 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
 
 ```text
 ┌─────────────────────────────────────────────────────────────┐
-│                    Gradio UI (src/app.py)                    │
-│  Overview │ Generation │ Healing │ Vision │ Artifacts │       │
+│                   Gradio UI (src/app.py)                    │
+│  Overview │ Generation │ Healing │ Vision │ Artifacts │     │
 │  Evaluation │ Traces │ Models                               │
-└──────┬──────┴────┬────┴───┬────┴─────┬─────┴─────┬─────┴───┬───┘
-       │           │        │          │            │         │
-       ▼           ▼        ▼          │            ▼         ▼
-  src/services/  (streaming generators)    workbench_service.py
-       │
-  ┌────┴──────────────────────────────────┐
-  │           Pipeline Layer              │
-  │  src/healing/   src/context/          │
-  │  src/agents/    src/observability/    │
-  └────┬──────────────────────────────────┘
-       │
-  ┌────┴─────────────┐
-  │   src/llm/       │   LLMRouter → LM Studio / Ollama
-  │   schemas/       │   Pydantic validation
-  └──────────────────┘
+└──────────────────────────────┬──────────────────────────────┘
+                               │ calls only src/services/
+┌──────────────────────────────▼──────────────────────────────┐
+│                      src/services/                          │
+│  generation_service  healing_service  workbench_service     │
+│                   (streaming generators)                    │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+┌──────────────────────────────▼──────────────────────────────┐
+│                      Pipeline Layer                         │
+│  src/healing/   src/context/                                │
+│  src/agents/    src/observability/                          │
+└──────────────────────────────┬──────────────────────────────┘
+                               │
+                    ┌──────────▼──────────┐
+                    │     src/llm/        │  LLMRouter → LM Studio / Ollama
+                    │     schemas/        │  Pydantic validation
+                    └─────────────────────┘
 ```
 
 The UI layer calls only `src/services/`. Services call pipeline modules. Pipeline modules call `src/llm/` for LLM access and `schemas/` for data contracts. Every LLM call is recorded in `logs/traces.jsonl`. Every healing session produces a `HealingDecision` artifact in `tests/artifacts/`.
