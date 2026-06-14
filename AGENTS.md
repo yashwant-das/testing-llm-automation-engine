@@ -1,44 +1,184 @@
 # Repository Guidelines
 
-## Project Structure & Module Organization
+> Instructions for AI assistants (Claude, Codex, etc.) working in this codebase.
+> Verified against the current codebase as of 2026-06-06.
 
-- `src/` holds the core agents, models, and utilities behind the QA pipeline (generator, healer, vision logic plus Playwright/browser helpers and prompt loaders).
-- High-level orchestration (Gradio UI, CLI hooks) lives in `src/app.py`; any new feature should plug into the existing `agents/`, `models/`, or `utils/` packages, keeping helper modules focused per responsibility.
-- External assets: `prompts/` stores system prompts, `docs/` deep-dives (architecture, demos, scenarios), and `tests/` contains `unit_test_*.py`, generated specs, artifacts, and vision screenshots that the agents consume.
-- Playwright reports and execution artifacts are captured under `playwright-report/` and `test-results/`, so keep generated files out of version control (use `.gitignore` already configured).
+---
+
+## What This Project Is
+
+A reference AI Systems Engineering project — not a SaaS product. It implements
+Playwright test generation and self-healing using local LLMs with structured outputs,
+evaluation, observability, and AST-based repair. The goal is a reference-quality
+implementation of the patterns described in `docs/ai-systems-engineering.md`.
+
+---
+
+## Module Structure
+
+```text
+src/
+├── app.py                # Gradio UI — 8-tab workbench, wiring only
+├── agents/               # Pipeline entry points and public API
+│   ├── generator.py      # Orchestrates context collection + LLM call → generated test
+│   └── healer.py         # CLI entrypoint + re-exports src/healing public API
+├── services/             # Service layer — the boundary between UI and pipelines
+│   ├── generation_service.py
+│   ├── healing_service.py
+│   ├── vision_service.py
+│   └── workbench_service.py
+├── healing/              # Healing pipeline — 7 single-responsibility modules
+│   ├── classifier.py     # Heuristic failure classification (pure function)
+│   ├── planner.py        # LLM reasoning → HealingDecision
+│   ├── repair.py         # AST-first code repair + string fallback
+│   ├── runner.py         # Playwright subprocess management
+│   ├── evidence.py       # Evidence gathering
+│   ├── verifier.py       # Post-repair verification
+│   └── artifact_store.py # JSON artifact persistence
+├── context/              # Browser context collection (single Playwright session)
+│   ├── collector.py      # Unified ContextSnapshot builder
+│   ├── dom.py, accessibility.py, locator_candidates.py
+│   ├── console.py, network.py, screenshot.py
+├── llm/                  # LLM routing layer
+│   ├── router.py         # LLMRouter with retry and fallback
+│   ├── client.py         # LLMClientFactory (no module-level side effects)
+│   ├── registry.py       # Model capability metadata
+│   └── policies.py       # RetryPolicy, TimeoutPolicy
+├── observability/        # JSONL trace writer
+│   ├── tracer.py         # Tracer (thread-local) + NullTracer
+│   ├── writer.py         # Thread-safe JSONL appender
+│   └── schemas.py        # Span models
+└── utils/
+    ├── llm.py            # parse_llm_response(), extract_json_block(), extract_code_block()
+    ├── prompt_loader.py  # load_prompt(), get_prompt_hash(), get_prompt_version()
+    ├── browser.py        # extract_domain() — URL → clean domain name for filenames
+    ├── formatting.py     # clean_ansi_codes(), format_test_result()
+    └── validation.py     # Input validation
+
+schemas/                  # Pydantic data contracts (source of truth for all data shapes)
+├── healing.py            # HealingAnalysis, HealingDecision, Evidence, HealingAction
+├── generation.py         # GenerationResult, GenerationDecision, VisionDecision
+├── evaluation.py         # BenchmarkRun, BenchmarkRunConfig, EvaluationResult
+├── artifacts.py          # ContextSnapshot, TraceMetadata
+└── shared.py             # FailureType, RunResult, ProvenanceRecord, LLMConfig
+
+benchmarks/               # Evaluation framework
+scripts/
+└── ast_repair.js         # ts-morph AST repair script (Node.js subprocess)
+prompts/                  # LLM system prompts (external markdown files)
+```
+
+---
+
+## Where to Add New Code
+
+| What you're adding | Where it goes |
+| --- | --- |
+| New LLM provider | `src/llm/client.py` + `src/llm/registry.py` (see `docs/development/adding-models.md`) |
+| New repair strategy | `src/healing/repair.py` + `schemas/healing.py` + `scripts/ast_repair.js` (see `docs/development/adding-healing-strategies.md`) |
+| New benchmark | `benchmarks/<type>/` + dataset JSON (see `docs/development/adding-benchmarks.md`) |
+| New failure classification pattern | `src/healing/classifier.py` + `benchmarks/healing/fixtures/repair_scenarios.json` |
+| New UI tab | `src/services/` first, then wire in `src/app.py` |
+| New data contract | `schemas/` as a Pydantic `BaseModel` |
+| New context collector | `src/context/` + register in `src/context/collector.py` |
+
+**Do not add logic to `src/agents/`.** This package contains the public pipeline entry
+points (`generator.py`, `healer.py`) and the CLI interface for the healer. New pipeline
+logic belongs in `src/healing/`, `src/context/`, `src/services/`, or `src/llm/`.
+
+---
 
 ## Build, Test, and Development Commands
 
-- `npm install` + `npx playwright install` provision the JS toolchain before running any tests.
-- `npm run lint` (runs JS, Py, and Markdown linting) ensures ESLint/Prettier, Ruff (linter), and Markdownlint agree before committing.
-- `npm run format` auto-formats JS via Prettier and Python via Ruff (formatting & import sorting); run before lint or staging changes.
-- `npm run test` executes the Playwright suite defined in `playwright.config.ts` and deposits reports under `playwright-report/`.
-- `npm run test:unit` runs the Python `tests/unit_test_*.py` modules inside a `uv` sandbox so heuristics and helpers stay covered.
-- Docker: `docker build -t testing-llm-automation-engine .` followed by `docker run -p 7860:7860 --name testing-llm-automation-engine ...` mirrors production (see `DOCKER.md`).
+```bash
+# Install Python dependencies
+uv sync
 
-## Coding Style & Naming Conventions
+# Install Node.js + Playwright browsers
+npm install && npx playwright install
 
-- JavaScript/TypeScript follows the Flat Config ESLint setup with 2-space indentation and Prettier formatting; run `npm run lint:js` or let Husky/lint-staged auto-fix staged files.
-- Python code uses Ruff for linting, import sorting, and formatting (88 char line, double quotes). All commands should run using `uv run`.
-- Markdown files should pass `markdownlint-cli2`; keep section headers consistent with sentence case (see README structure).
-- Naming patterns: Python tests start with `unit_test_`, generated TypeScript specs land under `tests/generated/`, and healing artifacts are under `tests/artifacts/` for easy discovery.
+# Run all Python unit tests (no live LLM or browser required — 553 tests)
+uv run python -m pytest tests/unit_test_*.py -q
+
+# Run the classification benchmark (deterministic, no LLM)
+uv run python -c "
+from benchmarks.healing.runner import run_healing_benchmark
+from schemas.evaluation import BenchmarkRunConfig
+from pathlib import Path
+config = BenchmarkRunConfig(
+    model='heuristic', provider='local',
+    prompt_name='n/a', prompt_version='1', prompt_hash='n/a',
+    temperature=0.0, dataset_version='1.0.0', benchmark_type='healing-classification',
+)
+run = run_healing_benchmark(Path('benchmarks/healing/fixtures/repair_scenarios.json'), Path('.'), config)
+print(f'{run.passed}/{run.total} passed')
+"
+
+# Lint (JS + Python + Markdown)
+npm run lint
+
+# Format Python
+uv run ruff format .
+
+# Launch the workbench (requires LLM for generation/healing tabs)
+uv run python src/app.py
+# Open http://127.0.0.1:7860
+
+# Run Playwright E2E tests
+npm run test
+```
+
+---
 
 ## Testing Guidelines
 
-- Playwright (`@playwright/test`) covers E2E flows invoked via `npm test`; store living failures in `test-results/`/`playwright-report/` for debugging.
-- Python `unittest` modules verify deterministic heuristics; keep new logic in `tests/unit_test_*.py` and follow the existing `setUp`-style structure.
-- Tests should target a single agent capability (generation, vision, healing) and assert both log output and artifact creation where applicable.
-- Run `npm run lint` after tests to ensure linting passes; failing tests should be rerun with `DEBUG=1` to capture logs.
+- All Python tests are in `tests/unit_test_*.py`. Use `unittest.TestCase`.
+- Tests must NOT require a live LLM, live browser, or network connection.
+- Mock the LLM router with `@patch("src.healing.planner.get_default_router")`.
+- Mock the Playwright page with `MagicMock()` for context collector tests.
+- The `model_used` attribute on mock `LLMResponse` objects must be a string (not a `MagicMock`).
+- See `docs/development/testing.md` for full patterns.
 
-## Commit & Pull Request Guidelines
+---
 
-- Commits follow Conventional Commits (`feat:`, `fix:`, `chore:`) as seen in recent history; keep lines under 72 characters and the body focused on why.
-- Pull requests must describe the change, list commands executed (lint/tests), link related issues or tickets, and attach a Playwright report or screenshot when UI behavior changes.
-- Include before/after artifacts when healing logic shifts (e.g., new `HealingDecision` JSON) so reviewers can evaluate the fix trace.
-- Tag reviewers early if the change touches docs, prompts, or prompts configuration to ensure cross-functional validation.
+## Coding Style
 
-## Security & Configuration Tips
+- Python: Ruff (88-char lines, double quotes). Run `uv run ruff format .` before committing.
+- TypeScript: Prettier with 2-space indentation. Run `npm run format` before committing.
+- Markdown: must pass `markdownlint-cli2`. Run `npm run lint:md` to check.
+- All LLM responses must be parsed via `parse_llm_response(raw, ModelClass)` — never `json.loads()` directly.
+- All new data contracts must be Pydantic `BaseModel` subclasses in `schemas/`.
 
-- Protect credentials by using ENV variables documented in `ENV_VARIABLES.md`; do not commit real keys.
-- Prompt tweaks belong in `prompts/`; update both markdown and any JSON-loading helpers in tandem to keep LLM behavior predictable.
-- When adding new agents, ensure their subprocess calls sanitize inputs and reuse the shared `validation.py` helpers.
+---
+
+## Commit Guidelines
+
+- Use Conventional Commits: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`.
+- Include before/after artifacts when healing logic changes.
+- Run `npm run lint` and `uv run python -m pytest tests/unit_test_*.py -q` before committing.
+
+---
+
+## Documentation
+
+Active documentation lives in:
+
+- `README.md` — entry point, architecture overview, quick start
+- `AGENTS.md` — this file (AI assistant context)
+- `docs/decisions.md` — all Architecture Decision Records (ADR-001 through ADR-011)
+- `docs/architecture/` — per-subsystem architecture docs
+- `docs/development/` — contributor guides
+- `docs/evaluation/` — benchmark and evaluation methodology
+- `docs/prompts/` — prompt engineering documentation
+- `docs/env-variables.md` — all environment variables with defaults
+- `docs/docker.md` — Docker setup and deployment
+
+Historical documents (completed plans, pre-decision evaluations) are in `docs/history/`.
+
+---
+
+## Security
+
+- Do not commit `.env` files or real API keys.
+- All subprocess calls use list arguments — no shell injection risk.
+- Prompt changes go in `prompts/`; increment the version in `prompts/manifest.json`.

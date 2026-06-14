@@ -1,152 +1,106 @@
 """
 Test generation agent for creating Playwright test scripts.
 
-This module generates TypeScript Playwright tests from URLs and feature descriptions
-using LLM-based code generation.
+Generates TypeScript Playwright tests from a URL and feature description
+by fetching page context and calling an LLM.  The LLM response is validated
+through GenerationResult before returning.
+
+generate_test_script() returns a GenerationDecision carrying the full
+provenance record (model, tokens, latency, context snapshot used).
 """
 
+import hashlib
 import logging
-import os
-import subprocess
-import sys
 
-from src.utils.browser import extract_domain, fetch_page_context
-from src.utils.formatting import format_test_result
-from src.utils.llm import extract_code_block, get_client, get_model
-from src.utils.prompt_loader import load_prompt
+from schemas.generation import GenerationDecision, GenerationResult
+from src.llm import get_default_router
+from src.utils.llm import extract_code_block
+from src.utils.prompt_loader import get_prompt_hash, get_prompt_version, load_prompt
 
 logger = logging.getLogger(__name__)
 
-# Add the project root to sys.path to support 'src.' imports when run as a script
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
-
 TEST_DIR = "tests/generated"
-os.makedirs(TEST_DIR, exist_ok=True)
 
 
-def generate_test_script(url, feature_description):
+def generate_test_script(url: str, feature_description: str) -> GenerationDecision:
     """Generate a Playwright test script from a URL and feature description.
 
     Args:
-        url: Validated URL string
-        feature_description: Validated feature description string
+        url: Validated URL string.
+        feature_description: Validated feature description string.
 
     Returns:
-        str: Generated TypeScript test code, or error message if generation fails
+        GenerationDecision carrying the generated code and full provenance.
+
+    Raises:
+        ValueError: If the LLM returns empty or invalid code.
+        Exception:  On LLM connectivity or context-collection failures.
     """
-    try:
-        logger.info(f"Generating test for URL: {url}")
-        # 1. Fetch page context (HTML)
-        html_context = fetch_page_context(url)
+    logger.info("Generating test for URL: %s", url)
 
-        if "Error" in html_context:
-            return html_context
+    from src.context import collect_context
 
-        # 2. Load system instruction from prompts/generator.md
-        system_instruction = load_prompt("generator")
+    snapshot = collect_context(url, capture_html=True, capture_a11y=True)
 
-        # 3. Create user prompt with target URL and description
-        user_prompt = f"""
-    TARGET URL: {url}
-    USER STORY: {feature_description}
-    PAGE CONTEXT: {html_context}
-    """
+    if not snapshot.html and not snapshot.accessibility_tree:
+        raise ValueError(f"Failed to fetch page context from {url}")
 
-        # 4. Call LLM to generate code
-        client = get_client()
-        try:
-            response = client.chat.completions.create(
-                model=get_model(),
-                messages=[
-                    {"role": "system", "content": system_instruction},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.1,
-            )
+    # Build a richer PAGE CONTEXT block from the snapshot
+    context_parts: list[str] = []
+    if snapshot.html:
+        context_parts.append(snapshot.html)
+    if snapshot.accessibility_tree:
+        context_parts.append(
+            f"ACCESSIBILITY TREE:\n{snapshot.accessibility_tree[:5000]}"
+        )
+    if snapshot.locator_candidates:
+        cands = "\n".join(f"  - {c}" for c in snapshot.locator_candidates)
+        context_parts.append(f"LOCATOR CANDIDATES (prefer these):\n{cands}")
+    if snapshot.console_errors:
+        errs = "\n".join(snapshot.console_errors[:5])
+        context_parts.append(f"CONSOLE ERRORS:\n{errs}")
 
-            if not response.choices or not response.choices[0].message.content:
-                return "Error: LLM returned empty response"
+    html_context = "\n\n".join(context_parts)
 
-            # 5. Extract code block from response
-            code = extract_code_block(response.choices[0].message.content)
-            if not code:
-                return "Error: Could not extract code block from LLM response"
+    prompt_version = get_prompt_version("generator")
+    prompt_hash = get_prompt_hash("generator")
+    system_instruction = load_prompt("generator")
+    user_prompt = f"""
+TARGET URL: {url}
+USER STORY: {feature_description}
+PAGE CONTEXT: {html_context}
+"""
 
-            return code
+    router = get_default_router()
+    llm_response = router.complete_primary(
+        messages=[
+            {"role": "system", "content": system_instruction},
+            {"role": "user", "content": user_prompt},
+        ],
+        temperature=0.1,
+    )
 
-        except Exception as e:
-            return f"LLM Error: {str(e)}"
+    if not llm_response.content:
+        raise ValueError("LLM returned empty response")
 
-    except Exception as e:
-        return f"Error generating test script: {str(e)}"
+    extracted = extract_code_block(llm_response.content)
+    result = GenerationResult(code=extracted)
 
+    snapshot_id = hashlib.sha256((snapshot.html or "").encode("utf-8")).hexdigest()[:12]
 
-def run_generated_test(url, code_snippet, description="test"):
-    """Run a generated test script using Playwright.
-
-    Args:
-        url: Validated URL string
-        code_snippet: TypeScript test code to run
-        description: Test description for filename generation
-
-    Returns:
-        str: Test execution result message (pass/fail with logs)
-    """
-    if not code_snippet or not code_snippet.strip():
-        return "Error: No test code provided"
-
-    try:
-        # Using the new naming convention: [domain]_[description]_[YYYYMMDD_HHMMSS].spec.ts
-        import re
-        from datetime import datetime
-
-        domain = extract_domain(url)
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-
-        # Meaningful snake_case sanitization (limited to alphanumeric and simple hyphens)
-        clean_desc = re.sub(r"[^a-zA-Z0-9]", "_", description).lower()
-        # Remove consecutive underscores
-        clean_desc = re.sub(r"_+", "_", clean_desc)
-        snake_desc = clean_desc[:40].strip("_")
-
-        filename = f"{domain}_{snake_desc}_{timestamp}.spec.ts"
-        filepath = os.path.join(TEST_DIR, filename)
-
-        # Validate filepath before writing
-        if not os.path.exists(TEST_DIR):
-            os.makedirs(TEST_DIR, exist_ok=True)
-
-        with open(filepath, "w", encoding="utf-8") as f:
-            f.write(code_snippet)
-
-        logger.info(f"Running {filename}...")
-
-        # Subprocess run uses a list, so shell quoting is handled automatically.
-
-        try:
-            result = subprocess.run(
-                ["npx", "playwright", "test", filepath],
-                capture_output=True,
-                text=True,
-                timeout=45,
-                cwd=os.path.dirname(
-                    os.path.dirname(os.path.dirname(__file__))
-                ),  # Project root
-            )
-
-            if result.returncode == 0:
-                return format_test_result(filepath, result.stdout, success=True)
-            else:
-                # Check if stdout has more useful info than stderr in case of playwright failures
-                logs = result.stdout if result.stdout else result.stderr
-                return format_test_result(filepath, logs, success=False)
-
-        except subprocess.TimeoutExpired:
-            return f"Error: Test execution timed out after 45 seconds.\nStored in: {filepath}"
-        except FileNotFoundError:
-            return "Error: Playwright not found. Please run 'npx playwright install'"
-        except Exception as e:
-            return f"Execution Error: {str(e)}\nStored in: {filepath}"
-
-    except Exception as e:
-        return f"Error running test: {str(e)}"
+    return GenerationDecision(
+        url=url,
+        story=feature_description,
+        code=result.code,
+        line_count=result.line_count,
+        context_snapshot=snapshot,
+        model_used=llm_response.model_used,
+        provider=llm_response.provider,
+        prompt_version=prompt_version,
+        prompt_hash=prompt_hash,
+        input_tokens=llm_response.input_tokens,
+        output_tokens=llm_response.output_tokens,
+        latency_ms=llm_response.latency_ms,
+        retry_count=llm_response.retry_count,
+        context_snapshot_id=snapshot_id,
+    )

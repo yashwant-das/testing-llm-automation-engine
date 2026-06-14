@@ -1,7 +1,7 @@
 import unittest
 
-from src.agents.healer import classify_failure_heuristic
-from src.models.healing_model import FailureType
+from schemas.shared import FailureType
+from src.healing.classifier import classify_failure_heuristic
 
 
 class TestFailureClassification(unittest.TestCase):
@@ -45,6 +45,12 @@ class TestFailureClassification(unittest.TestCase):
         logs = "TargetClosedError: browser has been closed"
         f_type, conf, reason = classify_failure_heuristic(logs)
         self.assertEqual(f_type, FailureType.ENVIRONMENT_ISSUE)
+        self.assertEqual(conf, 1.0)
+
+    def test_waiting_for_locator_heuristic(self):
+        logs = "Error: waiting for locator('button') to be visible"
+        f_type, conf, reason = classify_failure_heuristic(logs)
+        self.assertEqual(f_type, FailureType.TIMEOUT)
         self.assertEqual(conf, 1.0)
 
 

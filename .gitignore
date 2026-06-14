@@ -52,6 +52,7 @@ playwright/.cache/
 # Logs
 *.log
 logs/
+!logs/.gitkeep
 
 # OS
 .DS_Store
@@ -60,8 +61,10 @@ Thumbs.db
 # Project Specific
 tests/screenshots/*.png
 tests/artifacts/
-# tests/generated/*.spec.ts (Commented out to allow the user to commit generated/demo tests)
-!tests/generated/.gitkeep
+# Ignore runtime-generated spec files; keep committed demo fixtures
+tests/generated/*.spec.ts
+!tests/generated/broken_example.spec.ts
+!tests/generated/framework_smoke.spec.ts
 
 # Gradio
 flagged/

@@ -1,0 +1,58 @@
+{
+  "version": "1.0.0",
+  "description": "Healing benchmark: known broken test files with synthetic error logs and expected repair checks. Maps to tests/fixtures/*.spec.ts.",
+  "cases": [
+    {
+      "id": "heal-001",
+      "description": "Selector drift — ID selector drifted, locator resolves to 0 elements",
+      "broken_test_file": "tests/fixtures/broken_selector.spec.ts",
+      "injected_failure_type": "LOCATOR_NOT_FOUND",
+      "error_log": "Error: locator('#submit-btn') could not be found on the page.\nlocator resolved to 0 elements",
+      "checks": {
+        "expected_failure_type": "LOCATOR_NOT_FOUND",
+        "must_fix_pattern": "locator('#submit-btn')",
+        "fixed_code_must_contain": ["data-testid"],
+        "code_must_change": true
+      }
+    },
+    {
+      "id": "heal-002",
+      "description": "Timeout too short — 5000ms on a slow page needing 30000ms",
+      "broken_test_file": "tests/fixtures/broken_timeout.spec.ts",
+      "injected_failure_type": "TIMEOUT",
+      "error_log": "TimeoutError: page.goto: Timeout 5000ms exceeded.\nCall log:\n  - navigating to 'https://example.com/slow', waiting until 'load'",
+      "checks": {
+        "expected_failure_type": "TIMEOUT",
+        "must_fix_pattern": "timeout: 5000",
+        "fixed_code_must_contain": [],
+        "code_must_change": true
+      }
+    },
+    {
+      "id": "heal-003",
+      "description": "Missing import — expect not imported from @playwright/test",
+      "broken_test_file": "tests/fixtures/broken_import.spec.ts",
+      "injected_failure_type": "JAVASCRIPT_ERROR",
+      "error_log": "ReferenceError: expect is not defined\n    at Object.<anonymous> (broken_import.spec.ts:6:3)\n    at Module._compile (node:internal/modules/cjs/loader:1356:14)",
+      "checks": {
+        "expected_failure_type": "JAVASCRIPT_ERROR",
+        "must_fix_pattern": null,
+        "fixed_code_must_contain": ["expect"],
+        "code_must_change": true
+      }
+    },
+    {
+      "id": "heal-004",
+      "description": "Wrong assertion — toBe used where toHaveText is required for a locator",
+      "broken_test_file": "tests/fixtures/broken_assertion.spec.ts",
+      "injected_failure_type": "ASSERTION_FAILED",
+      "error_log": "Error: expect(received).toBe(expected)\nExpected: 'Example Domain'\nReceived: Locator\n  + expected - actual\n  -[Locator]\n  +'Example Domain'",
+      "checks": {
+        "expected_failure_type": "ASSERTION_FAILED",
+        "must_fix_pattern": null,
+        "fixed_code_must_contain": ["toHaveText"],
+        "code_must_change": true
+      }
+    }
+  ]
+}
