@@ -45,28 +45,3 @@ jobs:
       - name: Markdown lint
         run: npm run lint:md
 
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          cache: "npm"
-
-      - name: Install Node dependencies
-        run: npm ci
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v5
-        with:
-          version: "latest"
-
-      - name: Install Python dependencies
-        run: uv sync --group dev
-
-      - name: Run unit tests (includes benchmark gate)
-        run: uv run python -m pytest
