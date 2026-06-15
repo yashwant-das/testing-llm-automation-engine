@@ -178,13 +178,13 @@ flowchart LR
 
 - **Generation Pipeline** — give a URL and scenario, get a Playwright test
 - **Healing Pipeline** — give a failing test, get an LLM-repaired version
-- **Vision Pipeline** — give a URL, get a test generated from a screenshot
+- **Vision Pipeline** — give a URL and an instruction, get a test generated from a screenshot
 
 **Engineering** — observability and quality surfaces (tabs 5–8):
 
 - **Artifact Inspector** — browse every decision artifact with full provenance
 - **Evaluation** — run repeatable benchmarks and track pass-rate over time
-- **Trace Inspector** — inspect OpenTelemetry spans from every session
+- **Trace Inspector** — inspect custom JSONL observability spans from every session
 - **Models** — see which LLM models are registered and their capabilities
 """
 
