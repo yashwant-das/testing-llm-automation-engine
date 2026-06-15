@@ -56,7 +56,7 @@ def format_test_result(
         latency_ms = metadata.get("latency_ms", 0)
 
         model_block = (
-            f"\n── Model ─────────────────────────────────────\n"
+            f"\n\n── Model ─────────────────────────────────────\n"
             f"Provider : {provider}\n"
             f"Model    : {model}\n"
             f"Tokens   : {input_tokens:,} in / {output_tokens:,} out\n"
@@ -66,9 +66,9 @@ def format_test_result(
     return (
         f"{icon} TEST {status}\n"
         f"File: {filepath}"
-        f"{model_block}\n"
+        f"{model_block}\n\n"
         f"── Playwright Output ──────────────────────────\n"
-        f"{cleaned_output}\n"
+        f"{cleaned_output}\n\n"
     )
 
 
@@ -110,7 +110,7 @@ def format_healing_result(
         latency_ms = metadata.get("latency_ms", 0)
 
         model_block = (
-            f"\n── Model ─────────────────────────────────────\n"
+            f"\n\n── Model ─────────────────────────────────────\n"
             f"Provider : {provider}\n"
             f"Model    : {model}\n"
             f"Tokens   : {input_tokens:,} in / {output_tokens:,} out\n"
@@ -122,8 +122,8 @@ def format_healing_result(
         f"\n── Diagnosis ─────────────────────────────────\n"
         f"Failure type : {failure_type}\n"
         f"Confidence   : {int(confidence * 100)}%\n"
-        f"Strategy     : {strategy}"
-        f"{model_block}\n"
+        f"Strategy     : {strategy}\n"
+        f"{model_block}\n\n"
         f"── Reasoning ─────────────────────────────────\n"
-        f"{hypothesis}\n"
+        f"{hypothesis}\n\n"
     )

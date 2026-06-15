@@ -250,21 +250,22 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                     )
 
                 with gr.Column(scale=5):
-                    with gr.Tabs():
-                        with gr.Tab("Generated Code"):
+                    v_tabs = gr.Tabs()
+                    with v_tabs:
+                        with gr.Tab("Generated Code", id="v_tab_code"):
                             v_code_out = gr.Code(
                                 label="TypeScript",
                                 language="typescript",
                                 lines=20,
                                 elem_classes=["tall-code"],
                             )
-                        with gr.Tab("Screenshot"):
+                        with gr.Tab("Screenshot", id="v_tab_screenshot"):
                             v_image_preview = gr.Image(
                                 label="Captured Screenshot",
                                 type="filepath",
                                 interactive=False,
                             )
-                        with gr.Tab("Execution Logs"):
+                        with gr.Tab("Execution Logs", id="v_tab_logs"):
                             v_result_out = gr.Textbox(
                                 label="Execution Log",
                                 interactive=False,
@@ -274,15 +275,35 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
 
             v_meta_state = gr.State(None)
 
+            def analyze_visual_streaming_with_tabs(url, story):
+                for timeline, img, code, meta in analyze_visual_streaming(url, story):
+                    if code:
+                        yield timeline, img, code, meta, gr.Tabs(selected="v_tab_code")
+                    elif img:
+                        yield (
+                            timeline,
+                            img,
+                            code,
+                            meta,
+                            gr.Tabs(selected="v_tab_screenshot"),
+                        )
+                    else:
+                        yield timeline, img, code, meta, gr.Tabs()
+
             v_btn.click(
-                fn=analyze_visual_streaming,
+                fn=analyze_visual_streaming_with_tabs,
                 inputs=[v_url_in, v_story_in],
-                outputs=[v_timeline, v_image_preview, v_code_out, v_meta_state],
+                outputs=[v_timeline, v_image_preview, v_code_out, v_meta_state, v_tabs],
             )
+
+            def run_vision_test_streaming_with_tabs(url, code, story, meta):
+                for timeline, logs in run_vision_test_streaming(url, code, story, meta):
+                    yield timeline, logs, gr.Tabs(selected="v_tab_logs")
+
             v_run_btn.click(
-                fn=run_vision_test_streaming,
+                fn=run_vision_test_streaming_with_tabs,
                 inputs=[v_url_in, v_code_out, v_story_in, v_meta_state],
-                outputs=[v_timeline, v_result_out],
+                outputs=[v_timeline, v_result_out, v_tabs],
             )
 
         # ── Tab 5: Artifact Inspector ───────────────────────────────────────
