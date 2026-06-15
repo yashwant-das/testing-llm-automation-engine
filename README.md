@@ -313,7 +313,7 @@ Every benchmark run records: model, prompt version, prompt hash, temperature, se
 ```bash
 # Run the classification benchmark from Python
 uv run python -c "
-from benchmarks.healing.runner import load_dataset, run_healing_benchmark
+from benchmarks.healing.runner import run_healing_benchmark
 from schemas.evaluation import BenchmarkRunConfig
 from pathlib import Path
 
