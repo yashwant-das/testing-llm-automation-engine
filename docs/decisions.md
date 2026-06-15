@@ -384,7 +384,7 @@ Decompose `src/agents/healer.py` into 7 focused modules in `src/healing/`:
 
 ### Consequences
 
-- **Positive:** 553 unit tests, with test files per module. Adding a repair strategy requires touching `repair.py` and `ast_repair.js` only. Architecture matches the documentation.
+- **Positive:** 556 unit tests, with test files per module. Adding a repair strategy requires touching `repair.py` and `ast_repair.js` only. Architecture matches the documentation.
 - **Negative:** One additional import hop — callers import from `src.healing.runner`, not `src.agents.healer`. Old import paths were updated across the codebase.
 - **Revisit trigger:** None planned.
 - **Revisit trigger:** A third provider with a non-OpenAI-compatible API.

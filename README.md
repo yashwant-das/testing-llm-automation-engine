@@ -276,7 +276,7 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── docker.md                 # Docker setup and deployment
 │   └── env-variables.md          # Environment variable reference
 ├── tests/
-│   ├── unit_test_*.py            # 553 unit tests (zero live LLM or browser calls)
+│   ├── unit_test_*.py            # 556 unit tests (zero live LLM or browser calls)
 │   ├── fixtures/                 # Broken .spec.ts files for benchmark/repair testing
 │   ├── generated/                # Generated specs (runtime output)
 │   └── artifacts/                # HealingDecision JSON artifacts (runtime output)
@@ -377,7 +377,7 @@ The Trace Inspector tab in the workbench renders these tables without needing `j
 ## Development Commands
 
 ```bash
-# Run all unit tests (553 tests, no live LLM or browser required)
+# Run all unit tests (556 tests, no live LLM or browser required)
 uv run python -m pytest tests/unit_test_*.py -q
 
 # Lint and format (Python + TypeScript + Markdown)

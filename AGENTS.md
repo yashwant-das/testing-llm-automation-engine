@@ -97,7 +97,7 @@ uv sync
 # Install Node.js + Playwright browsers
 npm install && npx playwright install
 
-# Run all Python unit tests (no live LLM or browser required — 553 tests)
+# Run all Python unit tests (no live LLM or browser required — 556 tests)
 uv run python -m pytest tests/unit_test_*.py -q
 
 # Run the classification benchmark (deterministic, no LLM)

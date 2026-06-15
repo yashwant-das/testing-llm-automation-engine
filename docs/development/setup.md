@@ -81,7 +81,7 @@ The `.env` file is loaded automatically at startup. No environment export or she
 ```bash
 # Run unit tests (no LLM or browser required — should all pass)
 uv run python -m pytest tests/unit_test_*.py -q
-# Expected: 553 passed
+# Expected: 556 passed
 
 # Run the classification benchmark (no LLM required)
 uv run python -c "

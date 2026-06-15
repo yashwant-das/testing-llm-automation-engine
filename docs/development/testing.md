@@ -6,7 +6,7 @@
 
 ## Test Architecture
 
-The project has 553 Python unit tests across 16 files. All tests run without a live LLM, live browser, or network connection.
+The project has 556 Python unit tests across 16 files. All tests run without a live LLM, live browser, or network connection.
 
 | File | What it tests | Key pattern |
 | --- | --- | --- |
