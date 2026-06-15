@@ -17,6 +17,8 @@ from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from src.utils.formatting import clean_ansi_codes
+
 from .artifacts import ContextSnapshot
 from .shared import FailureType, ProvenanceRecord
 
@@ -299,6 +301,10 @@ class HealingDecision(ProvenanceRecord):
         is self-explaining without needing to open the raw JSON.
         """
         emoji = "✅" if self.verification_passed else "❌"
+        if self.verification_passed and self.failure_type == FailureType.UNKNOWN:
+            status_text = "Passed (No healing needed)"
+        else:
+            status_text = "Fixed" if self.verification_passed else "Failed"
         fail_type_str = (
             self.failure_type.value
             if hasattr(self.failure_type, "value")
@@ -366,7 +372,7 @@ class HealingDecision(ProvenanceRecord):
         return f"""# Healing Report: {self.timestamp}
 
 **File:** `{self.test_file}`
-**Status:** {emoji} {"Fixed" if self.verification_passed else "Failed"}
+**Status:** {emoji} {status_text}
 
 ## Diagnosis
 
@@ -375,7 +381,7 @@ class HealingDecision(ProvenanceRecord):
 
 ## Evidence
 
-- **Error:** `{self.evidence.error_log[:200]}...`
+- **Error:** `{clean_ansi_codes(self.evidence.error_log)[:200]}...`
 - **Screenshot:** {screenshot_md}
 
 ## Root Cause Evidence
