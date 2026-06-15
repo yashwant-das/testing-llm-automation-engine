@@ -140,17 +140,18 @@ with no cloud dependency.
                               │  Generation   │
   Failing Test     ─────────▶ │    Healing    │ ─────────▶ Repaired Spec (.ts)
                               │    Vision     │
-  Screenshot + URL ─────────▶ └───────┬───────┘ ─────────▶ Visual Spec (.ts)
-                                      │
-                                      ▼
-                           tests/artifacts/*.json
-                        (Decision Artifacts Storage)
-                                      │
-                                      ▼
-                    ┌───────────────────────────────────┐
-                    │  Engineering & Quality Surfaces   │
-                    │ Artifacts │ Evaluation │ Traces   │
-                    └───────────────────────────────────┘
+  Screenshot + URL ─────────▶ └───┬───────┬───┘ ─────────▶ Visual Spec (.ts)
+                                  │       │
+                Decision Artifacts│       │JSONL Traces
+          (tests/artifacts/*.json)▼       ▼(logs/traces.jsonl)
+              ┌──────────────────────┐ ┌─────────────────────┐
+              │  Artifact Inspector  │ │   Trace Inspector   │
+              └──────────────────────┘ └─────────────────────┘
+
+              ┌──────────────────────────────────────────────┐
+              │                 Evaluation                   │
+              │     (Offline runs → benchmarks/reports/)     │
+              └──────────────────────────────────────────────┘
 ```
 
 ## Navigation guide
