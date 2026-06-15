@@ -103,7 +103,9 @@ def on_artifact_select(name: str) -> tuple[str, dict]:
 # UI
 # ---------------------------------------------------------------------------
 
-with gr.Blocks(title="AI Engineering Workbench") as demo:
+with gr.Blocks(
+    title="AI Engineering Workbench", allowed_paths=[str(PROJECT_ROOT)]
+) as demo:
     gr.Markdown("# AI Engineering Workbench")
     gr.Markdown(
         "Reference implementation: structured LLM outputs · "
@@ -252,6 +254,7 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                             v_code_out = gr.Code(
                                 label="TypeScript",
                                 language="typescript",
+                                interactive=False,
                                 lines=20,
                                 elem_classes=["tall-code"],
                             )

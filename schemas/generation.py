@@ -188,7 +188,7 @@ class VisionDecision(ProvenanceRecord):
         )
         trace_str = f"`{self.trace_id}`" if self.trace_id else "*(n/a)*"
         screenshot_md = (
-            f"![Screenshot]({self.screenshot_path})"
+            f"![Screenshot](/file={self.screenshot_path})"
             if self.screenshot_path
             else "*(not captured)*"
         )

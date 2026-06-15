@@ -7,6 +7,17 @@ Write a complete, runnable Playwright test file from the provided URL, user stor
 - One `test()` block per file. Name the test after the user story, not the URL.
 - No `describe()` blocks for single-test files.
 
+## Structure Example
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("User action description", async ({ page }) => {
+  await page.goto("https://example.com");
+  // ... interactions and assertions ...
+});
+```
+
 ## Selector strategy (in priority order)
 
 1. `page.getByRole(role, { name: '...' })` — prefer for interactive elements (buttons, links, inputs)

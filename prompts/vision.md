@@ -7,6 +7,17 @@ Analyze the UI screenshot and write a complete, runnable Playwright test that pe
 - Always begin the test with `await page.goto(TARGET_URL)` using the exact URL provided.
 - Name the test after the user action, not the URL.
 
+## Structure Example
+
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("User action description", async ({ page }) => {
+  await page.goto("https://example.com");
+  // ... interactions and assertions ...
+});
+```
+
 ## Selector strategy from screenshots
 
 When reading selector information from a screenshot:
