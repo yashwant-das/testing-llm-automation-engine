@@ -137,12 +137,10 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                     url_in = gr.Textbox(
                         label="Target URL",
                         placeholder="https://example.com",
-                        value="https://the-internet.herokuapp.com/login",
                     )
                     story_in = gr.Textbox(
                         label="Test Scenario",
                         placeholder="Describe the test scenario...",
-                        value="TC-AUTH-001: Verify that a registered user can authenticate using valid credentials and is redirected to the secure area.",
                         lines=3,
                     )
                     with gr.Row():
@@ -232,12 +230,10 @@ with gr.Blocks(title="AI Engineering Workbench") as demo:
                     v_url_in = gr.Textbox(
                         label="Target URL",
                         placeholder="https://example.com",
-                        value="https://www.saucedemo.com",
                     )
                     v_story_in = gr.Textbox(
                         label="Instruction",
                         placeholder="Describe the action to perform...",
-                        value="TC-AUTH-001: Verify that standard_user can log in with valid credentials and land on the product inventory page.",
                         lines=2,
                     )
                     with gr.Row():
