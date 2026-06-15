@@ -134,19 +134,23 @@ with no cloud dependency.
 ## Pipeline topology
 
 ```text
-URL + scenario
-    │
-    ▼
-Generation Pipeline ──▶ Playwright test file
-    │
-    ▼ (test fails)
-Healing Pipeline ───────▶ LLM + AST repair ──▶ repaired test
-    │
-    ▼ (screenshot path)
-Vision Pipeline ────────▶ vision LLM ─────────▶ test from screenshot
-    │
-    All three pipelines write decision artifacts to tests/artifacts/
-    └── Artifact Inspector · Run History · Evaluation · Trace Inspector
+       INPUTS                       PIPELINES                      OUTPUTS
+
+  URL + Scenario   ─────────▶ ┌───────────────┐ ─────────▶ Playwright Spec (.ts)
+                              │  Generation   │
+  Failing Test     ─────────▶ │    Healing    │ ─────────▶ Repaired Spec (.ts)
+                              │    Vision     │
+  Screenshot + URL ─────────▶ └───────┬───────┘ ─────────▶ Visual Spec (.ts)
+                                      │
+                                      ▼
+                           tests/artifacts/*.json
+                        (Decision Artifacts Storage)
+                                      │
+                                      ▼
+                    ┌───────────────────────────────────┐
+                    │  Engineering & Quality Surfaces   │
+                    │ Artifacts │ Evaluation │ Traces   │
+                    └───────────────────────────────────┘
 ```
 
 ## Navigation guide
