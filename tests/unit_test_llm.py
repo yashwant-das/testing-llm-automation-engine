@@ -737,20 +737,23 @@ class TestGetDefaultRouter(unittest.TestCase):
         _reset_default_router_for_testing()
 
     def test_returns_llm_router(self):
-        router = get_default_router()
+        with patch.dict("os.environ", {"LM_STUDIO_TEXT_MODEL": "mock-model"}):
+            router = get_default_router()
         self.assertIsInstance(router, LLMRouter)
 
     def test_returns_same_instance(self):
-        r1 = get_default_router()
-        r2 = get_default_router()
+        with patch.dict("os.environ", {"LM_STUDIO_TEXT_MODEL": "mock-model"}):
+            r1 = get_default_router()
+            r2 = get_default_router()
         self.assertIs(r1, r2)
 
     def test_reset_allows_new_router(self):
         from src.llm import _reset_default_router_for_testing
 
-        r1 = get_default_router()
-        _reset_default_router_for_testing()
-        r2 = get_default_router()
+        with patch.dict("os.environ", {"LM_STUDIO_TEXT_MODEL": "mock-model"}):
+            r1 = get_default_router()
+            _reset_default_router_for_testing()
+            r2 = get_default_router()
         self.assertIsNot(r1, r2)
 
     def test_router_reads_env_on_first_call(self):

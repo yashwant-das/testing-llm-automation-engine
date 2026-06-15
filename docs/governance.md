@@ -20,9 +20,6 @@
 | What is the AI assistant expected to know? | `AGENTS.md` |
 | What's the evaluation methodology? | `docs/evaluation/` |
 | How are prompts managed? | `docs/prompts/` |
-| What are the maturity scores? | `docs/scorecard.md` |
-| What future work exists? | `docs/backlog.md` |
-| What historical decisions were made? | `docs/history/` |
 
 ---
 
@@ -41,7 +38,6 @@
 | UI tab renamed or added | Update `README.md`, `AGENTS.md`, `docs/docker.md` |
 | New benchmark added | Update `docs/evaluation/benchmarks.md` |
 | Prompt file changed significantly | Update `docs/prompts/healing.md` or `generation.md`; bump version in `prompts/manifest.json` |
-| Phase or milestone completed | Update `docs/scorecard.md` with new maturity scores |
 
 ### What does NOT require documentation updates
 
@@ -72,12 +68,6 @@ ADR format: **Context → Decision → Alternatives → Consequences**
 ---
 
 ## Archive Policy
-
-Documentation moves to `docs/history/` when:
-
-- It describes a system or process that no longer exists
-- It was a one-time planning or evaluation document whose conclusions are captured elsewhere
-- It has no value for a new contributor who was not involved in its creation
 
 Documentation is **deleted** (not archived) when:
 

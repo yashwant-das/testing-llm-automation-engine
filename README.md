@@ -271,10 +271,7 @@ for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
 │   ├── evaluation/               # Benchmark and evaluation documentation
 │   ├── prompts/                  # Prompt design and versioning documentation
 │   ├── development/              # Developer onboarding and contribution guides
-│   ├── history/                  # Archived planning and evaluation documents
 │   ├── decisions.md              # Architecture Decision Records
-│   ├── scorecard.md              # Repository maturity scorecard
-│   ├── backlog.md                # Future work and research topics
 │   ├── governance.md             # Documentation governance rules
 │   ├── docker.md                 # Docker setup and deployment
 │   └── env-variables.md          # Environment variable reference
@@ -404,4 +401,3 @@ uv run python -m pytest tests/unit_test_healing.py -v
 - [`docs/development/setup.md`](docs/development/setup.md) — full setup and troubleshooting guide
 - [`docs/development/adding-models.md`](docs/development/adding-models.md) — how to add a new LLM provider
 - [`docs/decisions.md`](docs/decisions.md) — all Architecture Decision Records
-- [`docs/history/`](docs/history/) — phase-by-phase completion records and archived plans

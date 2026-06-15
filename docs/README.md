@@ -70,8 +70,6 @@ docs/
 ├── ai-systems-engineering.md  ← conceptual guide: patterns behind the project
 ├── decisions.md               ← ADRs: why things are the way they are
 ├── governance.md              ← rules for keeping docs accurate
-├── scorecard.md               ← repository maturity scores over time
-├── backlog.md                 ← unscheduled future work and experiments
 │
 ├── env-variables.md           ← reference: all environment variables
 ├── docker.md                  ← reference: Docker setup and deployment
@@ -105,12 +103,6 @@ docs/
 │   ├── healing.md
 │   ├── generation.md
 │   └── versioning.md
-│
-└── history/                   ← archived: completed plans, past evaluations
-    ├── README.md              ← explains what is archived and why
-    ├── phase-15-experience-consistency.md
-    ├── phase-16-ui-audit.md
-    └── phase-17-workbench-redesign.md  (+ earlier phases)
 ```
 
 ---

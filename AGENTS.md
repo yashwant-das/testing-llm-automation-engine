@@ -173,8 +173,6 @@ Active documentation lives in:
 - `docs/env-variables.md` — all environment variables with defaults
 - `docs/docker.md` — Docker setup and deployment
 
-Historical documents (completed plans, pre-decision evaluations) are in `docs/history/`.
-
 ---
 
 ## Security
