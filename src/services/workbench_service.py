@@ -160,7 +160,6 @@ Vision Pipeline ────────▶ vision LLM ────────�
 **Engineering** — observability and quality surfaces (tabs 5–8):
 
 - **Artifact Inspector** — browse every decision artifact with full provenance
-- **Run History** — unified cross-pipeline timeline, one row per artifact
 - **Evaluation** — run repeatable benchmarks and track pass-rate over time
 - **Trace Inspector** — inspect OpenTelemetry spans from every session
 - **Models** — see which LLM models are registered and their capabilities
