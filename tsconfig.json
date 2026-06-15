@@ -10,7 +10,8 @@
     "resolveJsonModule": true,
     "moduleResolution": "node",
     "outDir": "./dist",
-    "rootDir": "."
+    "rootDir": ".",
+    "ignoreDeprecations": "5.0"
   },
   "include": ["tests/**/*", "playwright.config.ts", "src/**/*"],
   "exclude": ["node_modules", "dist", "tests/fixtures", ".venv"]
