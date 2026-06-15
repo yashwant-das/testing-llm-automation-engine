@@ -482,7 +482,6 @@ if __name__ == "__main__":
     demo.launch(
         theme=gr.themes.Default(),
         css=css,
-        server_name="0.0.0.0",
         server_port=7860,
         allowed_paths=[str(PROJECT_ROOT)],
     )
