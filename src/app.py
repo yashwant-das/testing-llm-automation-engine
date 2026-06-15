@@ -103,9 +103,7 @@ def on_artifact_select(name: str) -> tuple[str, dict]:
 # UI
 # ---------------------------------------------------------------------------
 
-with gr.Blocks(
-    title="AI Engineering Workbench", allowed_paths=[str(PROJECT_ROOT)]
-) as demo:
+with gr.Blocks(title="AI Engineering Workbench") as demo:
     gr.Markdown("# AI Engineering Workbench")
     gr.Markdown(
         "Reference implementation: structured LLM outputs · "
@@ -484,5 +482,7 @@ if __name__ == "__main__":
     demo.launch(
         theme=gr.themes.Default(),
         css=css,
-        allowed_paths=[str(PROJECT_ROOT / "tests" / "screenshots")],
+        server_name="0.0.0.0",
+        server_port=7860,
+        allowed_paths=[str(PROJECT_ROOT)],
     )
