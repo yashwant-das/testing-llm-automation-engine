@@ -12,7 +12,7 @@ Choose the path that matches your goal.
 
 1. [`/README.md`](../README.md) — what the project does, quick start, repo structure
 1. [`ai-systems-engineering.md`](ai-systems-engineering.md) — the engineering philosophy: why structured outputs, evaluation, observability, and AST repair matter in AI pipelines
-1. [`architecture/overview.md`](architecture/overview.md) — how the six subsystems fit together
+1. [`architecture/overview.md`](architecture/overview.md) — how the core subsystems fit together
 
 ### "I want to understand how it works technically"
 
@@ -112,4 +112,5 @@ docs/
 - Source code comments and inline documentation → live in `src/`
 - Prompt text → lives in `prompts/` at the project root
 - Test fixtures → live in `tests/fixtures/`
-- Runtime artifacts (traces, healing decisions) → live in `logs/` and `tests/artifacts/`
+- Runtime artifacts (traces, decision artifacts) → live in `logs/` and `tests/artifacts/`
+- Benchmark reports → live in `benchmarks/reports/`
