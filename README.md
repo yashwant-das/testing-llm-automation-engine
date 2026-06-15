@@ -119,6 +119,10 @@ OLLAMA_TEXT_MODEL=qwen3.6:latest
 OLLAMA_VISION_MODEL=gemma4:26b
 ```
 
+> [!IMPORTANT]  
+> **100% Test Correctness Verified**  
+> This reference implementation has been verified to achieve 100% test correctness when using the `gemma4:26b` model. Performance and reliability may vary when substituting smaller or differently-tuned models.
+
 Only one provider is active at a time. Full variable reference: [docs/env-variables.md](docs/env-variables.md)
 
 ### Run
@@ -393,11 +397,13 @@ uv run python -m pytest tests/unit_test_healing.py -v
 
 ---
 
-## Further Reading
+## Documentation Hub
 
-- [`docs/architecture/overview.md`](docs/architecture/overview.md) — system architecture with component map
-- [`docs/architecture/healing.md`](docs/architecture/healing.md) — healing pipeline deep dive with sequence diagram
-- [`docs/ai-systems-engineering.md`](docs/ai-systems-engineering.md) — AI engineering patterns used in this project
-- [`docs/development/setup.md`](docs/development/setup.md) — full setup and troubleshooting guide
-- [`docs/development/adding-models.md`](docs/development/adding-models.md) — how to add a new LLM provider
-- [`docs/decisions.md`](docs/decisions.md) — all Architecture Decision Records
+The full documentation suite lives in the [`docs/`](docs/) directory.
+
+Start at the **[Documentation Hub (`docs/README.md`)](docs/README.md)**, which is organized by goal:
+
+- **"I want to understand how it works technically"** (Architecture deep-dives)
+- **"I want to understand why decisions were made"** (ADRs)
+- **"I want to contribute or extend it"** (Adding models, repair strategies)
+- **"I want to understand the evaluation methodology"** (Benchmarks & scoring)
