@@ -63,8 +63,8 @@ tests/screenshots/*.png
 tests/artifacts/
 # Ignore runtime-generated spec files; keep committed demo fixtures
 tests/generated/*.spec.ts
-!tests/generated/broken_example.spec.ts
 !tests/generated/framework_smoke.spec.ts
+benchmarks/reports/*.json
 
 # Gradio
 flagged/

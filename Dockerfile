@@ -39,9 +39,12 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # Copy configuration files
 COPY playwright.config.ts tsconfig.json ./
 
-# Copy application source code (src/ and prompts/)
+# Copy application source code and required resources
 COPY src/ ./src/
 COPY prompts/ ./prompts/
+COPY schemas/ ./schemas/
+COPY scripts/ ./scripts/
+COPY benchmarks/ ./benchmarks/
 
 EXPOSE 7860
 

@@ -37,6 +37,8 @@ Access the Gradio interface at `http://localhost:7860`.
 
 > [!TIP]
 > Use the **Healing Pipeline** tab in the UI for a visual experience of the healing pipeline described below.
+>
+> Also, if you want to preserve your execution logs and decision artifacts after the container stops, consider mounting the `logs/` and `tests/artifacts/` directories as well (e.g., `-v "$(pwd)/logs:/app/logs" -v "$(pwd)/tests/artifacts:/app/tests/artifacts"`).
 
 ### With Environment File
 
