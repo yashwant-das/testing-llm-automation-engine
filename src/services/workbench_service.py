@@ -133,25 +133,43 @@ with no cloud dependency.
 
 ## Pipeline topology
 
-```text
-       INPUTS                       PIPELINES                      OUTPUTS
+```mermaid
+flowchart LR
+    %% Inputs
+    URL[URL + Scenario]
+    Fail[Failing Test]
+    Shot[Screenshot + URL]
 
-  URL + Scenario   ---------> +---------------+ ---------> Playwright Spec (.ts)
-                              |  Generation   |
-  Failing Test     ---------> |    Healing    | ---------> Repaired Spec (.ts)
-                              |    Vision     |
-  Screenshot + URL ---------> +---+-------+---+ ---------> Visual Spec (.ts)
-                                  |       |
-                Decision Artifacts|       |JSONL Traces
-          (tests/artifacts/*.json)v       v(logs/traces.jsonl)
-              +----------------------+ +---------------------+
-              |  Artifact Inspector  | |   Trace Inspector   |
-              +----------------------+ +---------------------+
+    %% Pipelines
+    Gen[[Generation Pipeline]]
+    Heal[[Healing Pipeline]]
+    Vis[[Vision Pipeline]]
 
-              +----------------------------------------------+
-              |                 Evaluation                   |
-              |     (Offline runs -> benchmarks/reports/)    |
-              +----------------------------------------------+
+    %% Outputs
+    TS1(Playwright Spec .ts)
+    TS2(Repaired Spec .ts)
+    TS3(Visual Spec .ts)
+
+    %% Pipeline Execution Flow
+    URL --> Gen --> TS1
+    Fail --> Heal --> TS2
+    Shot --> Vis --> TS3
+
+    %% Telemetry & Storage
+    Art[(Decision Artifacts<br>tests/artifacts/)]
+    Log[(JSONL Traces<br>logs/traces.jsonl)]
+
+    Gen -.-> Art & Log
+    Heal -.-> Art & Log
+    Vis -.-> Art & Log
+
+    %% UI Surfaces
+    UI_Art{{Artifact Inspector}}
+    UI_Log{{Trace Inspector}}
+    UI_Eval{{Evaluation<br>Offline Benchmarks}}
+
+    Art ===> UI_Art
+    Log ===> UI_Log
 ```
 
 ## Navigation guide
