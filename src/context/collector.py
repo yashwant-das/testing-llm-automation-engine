@@ -18,7 +18,10 @@ from typing import Optional
 from playwright.sync_api import sync_playwright
 
 from schemas.artifacts import ContextSnapshot
-from src.context.accessibility import format_accessibility_snapshot
+from src.context.accessibility import (
+    fetch_accessibility_tree_dict,
+    format_accessibility_snapshot,
+)
 from src.context.console import attach_console_listener
 from src.context.dom import collect_dom
 from src.context.locator_candidates import extract_locator_candidates
@@ -106,7 +109,7 @@ def collect_context(
 
             if capture_a11y:
                 try:
-                    raw_a11y = page.accessibility.snapshot()
+                    raw_a11y = fetch_accessibility_tree_dict(page)
                     if raw_a11y:
                         snapshot.accessibility_tree = format_accessibility_snapshot(
                             raw_a11y

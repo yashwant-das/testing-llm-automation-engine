@@ -164,25 +164,38 @@ class TestCollectAccessibilityTree(unittest.TestCase):
 
         self.collect = collect_accessibility_tree
 
-    def test_returns_string_on_success(self):
+    def _mock_cdp_page(self, nodes=None):
         page = MagicMock()
-        page.accessibility.snapshot.return_value = {
-            "role": "button",
-            "name": "OK",
-            "children": [],
-        }
+        cdp_mock = MagicMock()
+        page.context.new_cdp_session.return_value = cdp_mock
+        if nodes is not None:
+            cdp_mock.send.return_value = {"nodes": nodes}
+        else:
+            cdp_mock.send.return_value = {}
+        return page, cdp_mock
+
+    def test_returns_string_on_success(self):
+        page, _ = self._mock_cdp_page(
+            [
+                {
+                    "nodeId": "1",
+                    "role": {"value": "button"},
+                    "name": {"value": "OK"},
+                    "childIds": [],
+                }
+            ]
+        )
         result = self.collect(page)
         self.assertIn("[button] OK", result)
 
     def test_returns_empty_when_snapshot_is_none(self):
-        page = MagicMock()
-        page.accessibility.snapshot.return_value = None
+        page, _ = self._mock_cdp_page(None)
         result = self.collect(page)
         self.assertEqual(result, "")
 
     def test_returns_empty_on_exception(self):
-        page = MagicMock()
-        page.accessibility.snapshot.side_effect = Exception("not available")
+        page, cdp_mock = self._mock_cdp_page([])
+        cdp_mock.send.side_effect = Exception("not available")
         result = self.collect(page)
         self.assertEqual(result, "")
 
@@ -498,10 +511,24 @@ class TestCollectContext(unittest.TestCase):
     def _mock_page_defaults(self, page: MagicMock) -> None:
         """Set sensible defaults on a mock page."""
         page.content.return_value = "<html><body><button>Submit</button></body></html>"
-        page.accessibility.snapshot.return_value = {
-            "role": "WebArea",
-            "name": "Page",
-            "children": [{"role": "button", "name": "Submit", "children": []}],
+        cdp_mock = MagicMock()
+        page.context.new_cdp_session.return_value = cdp_mock
+        cdp_mock.send.return_value = {
+            "nodes": [
+                {
+                    "nodeId": "1",
+                    "role": {"value": "WebArea"},
+                    "name": {"value": "Page"},
+                    "childIds": ["2"],
+                },
+                {
+                    "nodeId": "2",
+                    "role": {"value": "button"},
+                    "name": {"value": "Submit"},
+                    "childIds": [],
+                    "parentId": "1",
+                },
+            ]
         }
         # on() captures handlers; subsequent calls append to captured list
         page.on.return_value = None

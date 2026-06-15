@@ -36,6 +36,64 @@ def format_accessibility_snapshot(node: dict, depth: int = 0) -> str:
     return "\n".join(parts)
 
 
+def fetch_accessibility_tree_dict(page) -> dict | None:
+    """Fetch the accessibility tree via CDP (since Playwright Python lacks page.accessibility)."""
+    try:
+        cdp = page.context.new_cdp_session(page)
+        raw_tree = cdp.send("Accessibility.getFullAXTree")
+        nodes = raw_tree.get("nodes", [])
+        if not nodes:
+            return None
+
+        node_map = {}
+        for n in nodes:
+            node_id = n.get("nodeId")
+            role = n.get("role", {}).get("value", "")
+            if not role:
+                role = n.get("chromeRole", {}).get("value", "")
+            if isinstance(role, int):
+                role = str(role)
+            name = n.get("name", {}).get("value", "")
+            ignored = n.get("ignored", False)
+            node_map[node_id] = {
+                "role": role,
+                "name": name,
+                "children": [],
+                "_child_ids": n.get("childIds", []),
+                "_parent_id": n.get("parentId"),
+                "ignored": ignored,
+            }
+
+        root = None
+        for n in nodes:
+            node_id = n.get("nodeId")
+            mapped = node_map[node_id]
+            parent_id = mapped.get("_parent_id")
+            if parent_id and parent_id in node_map:
+                node_map[parent_id]["children"].append(mapped)
+            elif not parent_id:
+                root = mapped
+
+        def _filter_ignored(node):
+            valid_children = []
+            for child in node["children"]:
+                filtered_child = _filter_ignored(child)
+                if filtered_child["ignored"]:
+                    valid_children.extend(filtered_child["children"])
+                else:
+                    valid_children.append(filtered_child)
+            node["children"] = valid_children
+            return node
+
+        if root:
+            root = _filter_ignored(root)
+
+        return root
+    except Exception as exc:
+        logger.warning("CDP accessibility failed: %s", exc)
+        return None
+
+
 def collect_accessibility_tree(page) -> str:
     """Collect the Playwright accessibility tree from an open page.
 
@@ -46,7 +104,7 @@ def collect_accessibility_tree(page) -> str:
         Formatted accessibility tree string, or an empty string on failure.
     """
     try:
-        snapshot = page.accessibility.snapshot()
+        snapshot = fetch_accessibility_tree_dict(page)
         if not snapshot:
             logger.debug("Accessibility snapshot returned None")
             return ""
