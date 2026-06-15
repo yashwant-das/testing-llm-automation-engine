@@ -8,10 +8,10 @@
 
 Every prompt has two identifiers:
 
-| Identifier | Source | Meaning |
-| --- | --- | --- |
-| `version` | `prompts/manifest.json` | Human-set intent label — "this is a different version" |
-| `prompt_hash` | SHA-256 of file content | Reality — "this is the exact bytes that ran" |
+| Identifier    | Source                  | Meaning                                                |
+| ------------- | ----------------------- | ------------------------------------------------------ |
+| `version`     | `prompts/manifest.json` | Human-set intent label — "this is a different version" |
+| `prompt_hash` | SHA-256 of file content | Reality — "this is the exact bytes that ran"           |
 
 The version label is for humans. The hash is for machines. Both are recorded in every `HealingDecision` artifact and every `BenchmarkRunConfig`.
 

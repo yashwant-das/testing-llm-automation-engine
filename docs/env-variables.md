@@ -53,10 +53,10 @@ The `.env` file is loaded automatically at startup via `python-dotenv`. No resta
 
 ### `LLM_PROVIDER`
 
-| | |
-| --- | --- |
-| **Type** | String |
-| **Default** | `lm_studio` |
+|             |                       |
+| ----------- | --------------------- |
+| **Type**    | String                |
+| **Default** | `lm_studio`           |
 | **Options** | `lm_studio`, `ollama` |
 
 Selects the active LLM backend. Only variables for the selected provider are used; the other set is ignored.
@@ -67,36 +67,36 @@ Selects the active LLM backend. Only variables for the selected provider are use
 
 #### `LM_STUDIO_URL`
 
-| | |
-| --- | --- |
-| **Type** | String (URL) |
+|             |                            |
+| ----------- | -------------------------- |
+| **Type**    | String (URL)               |
 | **Default** | `http://localhost:1234/v1` |
 
 Base URL of the LM Studio local server.
 
 #### `LM_STUDIO_TEXT_MODEL`
 
-| | |
-| --- | --- |
-| **Type** | String |
+|             |                        |
+| ----------- | ---------------------- |
+| **Type**    | String                 |
 | **Default** | `qwen/qwen3.6-35b-a3b` |
 
 Name of the text/code model loaded in LM Studio. Used by the Generation and Healing pipelines.
 
 #### `LM_STUDIO_VISION_MODEL`
 
-| | |
-| --- | --- |
-| **Type** | String |
+|             |                          |
+| ----------- | ------------------------ |
+| **Type**    | String                   |
 | **Default** | `google/gemma-4-26b-a4b` |
 
 Name of the vision (multimodal) model loaded in LM Studio. Used by the Vision pipeline.
 
 #### `LM_STUDIO_API_KEY`
 
-| | |
-| --- | --- |
-| **Type** | String |
+|             |             |
+| ----------- | ----------- |
+| **Type**    | String      |
 | **Default** | `lm-studio` |
 
 Placeholder API key. LM Studio accepts any non-empty string.
@@ -107,27 +107,27 @@ Placeholder API key. LM Studio accepts any non-empty string.
 
 #### `OLLAMA_URL`
 
-| | |
-| --- | --- |
-| **Type** | String (URL) |
+|             |                             |
+| ----------- | --------------------------- |
+| **Type**    | String (URL)                |
 | **Default** | `http://localhost:11434/v1` |
 
 Base URL of the Ollama local server.
 
 #### `OLLAMA_TEXT_MODEL`
 
-| | |
-| --- | --- |
-| **Type** | String |
+|             |                  |
+| ----------- | ---------------- |
+| **Type**    | String           |
 | **Default** | `qwen3.6:latest` |
 
 Name of the text/code model pulled in Ollama. Used by the Generation and Healing pipelines.
 
 #### `OLLAMA_VISION_MODEL`
 
-| | |
-| --- | --- |
-| **Type** | String |
+|             |              |
+| ----------- | ------------ |
+| **Type**    | String       |
 | **Default** | `gemma4:26b` |
 
 Name of the vision model pulled in Ollama. Used by the Vision pipeline.
@@ -138,10 +138,10 @@ Name of the vision model pulled in Ollama. Used by the Vision pipeline.
 
 #### `LOG_LEVEL`
 
-| | |
-| --- | --- |
-| **Type** | String |
-| **Default** | `INFO` |
+|             |                                     |
+| ----------- | ----------------------------------- |
+| **Type**    | String                              |
+| **Default** | `INFO`                              |
 | **Options** | `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 Controls the verbosity of framework log output. Set to `DEBUG` for full LLM prompt/response traces. Third-party loggers (`httpx`, `openai._base_client`, `gradio`) are always suppressed below `WARNING` regardless of this setting.

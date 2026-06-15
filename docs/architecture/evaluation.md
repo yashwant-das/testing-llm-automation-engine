@@ -37,12 +37,12 @@ The framework provides:
 
 Four cases covering the most common failure types:
 
-| Case ID | Injected failure | Error log | Expected classification |
-| --- | --- | --- | --- |
-| `heal-001` | Selector drift | `locator('#submit-btn') resolved to 0 elements` | `LOCATOR_NOT_FOUND` |
-| `heal-002` | Timeout too short | `TimeoutError: Timeout 5000ms exceeded` | `TIMEOUT` |
-| `heal-003` | Missing import | `ReferenceError: expect is not defined` | `JAVASCRIPT_ERROR` |
-| `heal-004` | Wrong assertion | `expect(received).toBe(expected)` | `ASSERTION_FAILED` |
+| Case ID    | Injected failure  | Error log                                       | Expected classification |
+| ---------- | ----------------- | ----------------------------------------------- | ----------------------- |
+| `heal-001` | Selector drift    | `locator('#submit-btn') resolved to 0 elements` | `LOCATOR_NOT_FOUND`     |
+| `heal-002` | Timeout too short | `TimeoutError: Timeout 5000ms exceeded`         | `TIMEOUT`               |
+| `heal-003` | Missing import    | `ReferenceError: expect is not defined`         | `JAVASCRIPT_ERROR`      |
+| `heal-004` | Wrong assertion   | `expect(received).toBe(expected)`               | `ASSERTION_FAILED`      |
 
 **Classification-only mode** (default, no LLM):
 
@@ -98,12 +98,12 @@ Six lexical checks that a generated test encodes the original intent:
 
 The mutation engine introduces known failures into a working spec. Four mutation types:
 
-| Mutation | What it does | Produces |
-| --- | --- | --- |
-| `selector_drift` | Replaces a valid locator with a broken one | `LOCATOR_NOT_FOUND` |
-| `timeout_reduction` | Replaces `{ timeout: N }` with `{ timeout: 1 }` | `TIMEOUT` |
-| `import_removal` | Removes a required import line | `JAVASCRIPT_ERROR` |
-| `assertion_swap` | Replaces `toHaveText()` with `toBe()` | `ASSERTION_FAILED` |
+| Mutation            | What it does                                    | Produces            |
+| ------------------- | ----------------------------------------------- | ------------------- |
+| `selector_drift`    | Replaces a valid locator with a broken one      | `LOCATOR_NOT_FOUND` |
+| `timeout_reduction` | Replaces `{ timeout: N }` with `{ timeout: 1 }` | `TIMEOUT`           |
+| `import_removal`    | Removes a required import line                  | `JAVASCRIPT_ERROR`  |
+| `assertion_swap`    | Replaces `toHaveText()` with `toBe()`           | `ASSERTION_FAILED`  |
 
 ```python
 broken_code = mutate(original_code, MutationType.SELECTOR_DRIFT, seed=42)

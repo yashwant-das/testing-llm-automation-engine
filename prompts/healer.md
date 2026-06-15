@@ -35,23 +35,23 @@ You MUST return a valid JSON object matching this schema:
 REPAIR STRATEGY SELECTION:
 Choose the most specific strategy for your fix:
 
-- "selector_replace"  — A locator selector changed (e.g. '#old-btn' → '#new-btn').
+- "selector_replace" — A locator selector changed (e.g. '#old-btn' → '#new-btn').
   Set original_code to the OLD locator call, fixed_code to the NEW locator call.
   The system will update ALL occurrences of that selector in the file.
 
-- "import_add"        — A required import is missing entirely.
+- "import_add" — A required import is missing entirely.
   Set original_code to "" and fixed_code to the full import statement.
 
-- "timeout_adjust"    — A timeout value needs to change (e.g. 5000 → 30000).
+- "timeout_adjust" — A timeout value needs to change (e.g. 5000 → 30000).
   Set original_code to the object/value with the old timeout, fixed_code with the new timeout.
 
-- "role_argument"     — A getByRole name option is wrong.
+- "role_argument" — A getByRole name option is wrong.
   Set original_code to the getByRole call with the OLD name, fixed_code with the NEW name.
 
-- "assertion_swap"    — An assertion method needs to be renamed (e.g. toBe → toEqual).
+- "assertion_swap" — An assertion method needs to be renamed (e.g. toBe → toEqual).
   Set original_code to the OLD assertion call, fixed_code to the NEW assertion call.
 
-- "string_replace"    — Catch-all for changes that do not fit the above categories.
+- "string_replace" — Catch-all for changes that do not fit the above categories.
   The system will do an exact or indentation-normalized string replacement.
 
 IMPORTANT RULES:

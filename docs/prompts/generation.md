@@ -53,6 +53,6 @@ The locator candidates provided in the user message (pre-extracted from the a11y
 
 ## Version History
 
-| Version | Change |
-| --- | --- |
-| 1 | Initial generator prompt |
+| Version | Change                   |
+| ------- | ------------------------ |
+| 1       | Initial generator prompt |

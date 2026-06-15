@@ -4,7 +4,6 @@
   "description": "A modular, LLM-powered QA automation agent that generates and maintains Playwright tests",
   "scripts": {
     "test": "npx playwright test tests/generated/framework_smoke.spec.ts",
-    "test:demo": "npx playwright test tests/generated/broken_example.spec.ts",
     "test:unit": "uv run python -m pytest",
     "type-check": "tsc --noEmit",
     "prepare": "husky",

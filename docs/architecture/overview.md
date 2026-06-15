@@ -7,7 +7,7 @@
 
 ## Purpose
 
-The AI Engineering Workbench is a pipeline system. Raw inputs (URLs, test scenarios, broken specs) flow through a sequence of pipeline stages — each with a single responsibility — and produce structured outputs (TypeScript specs, HealingDecision artifacts, JSONL traces).
+The AI Engineering Workbench is a pipeline system. Raw inputs (URLs, test scenarios, broken specs) flow through a sequence of pipeline stages — each with a single responsibility — and produce structured outputs (TypeScript specs, decision artifacts, JSONL traces).
 
 The architecture is designed around three constraints:
 
@@ -25,7 +25,7 @@ The architecture is designed around three constraints:
 │  8 tabs — Overview | Generation | Healing | Vision | Artifacts |    │
 │           Evaluation | Traces | Models                              │
 └──────────────────────────┬──────────────────────────────────────────┘
-                           │ imports only from src/services/
+                           │ UI logic calls src/services/
 ┌──────────────────────────▼──────────────────────────────────────────┐
 │                        Service Layer (src/services/)                │
 │  generation_service healing_service vision_service workbench_service│
@@ -34,9 +34,9 @@ The architecture is designed around three constraints:
 ┌──────▼──────┐  ┌────────▼──────┐  ┌───────▼──────────────────────┐
 │ src/agents/ │  │ src/healing/  │  │ src/context/                 │
 │ generator   │  │ runner        │  │ collector → dom              │
-│ vision      │  │ classifier    │  │          → accessibility     │
-│ healer shim │  │ planner       │  │          → console           │
-└──────┬──────┘  │ repair        │  │          → network           │
+│ healer      │  │ classifier    │  │          → accessibility     │
+└──────┬──────┘  │ planner       │  │          → console           │
+       │         │ repair        │  │          → network           │
        │         │ verifier      │  │          → locator_candidates│
        │         │ evidence      │  │          → screenshot        │
        │         │ artifact_store│  └──────────────────────────────┘
@@ -54,6 +54,7 @@ The architecture is designed around three constraints:
 └─────────────────────────────────────────────────────────────────────┘
 
 Schemas (schemas/)  ←── data contracts between all layers (Pydantic)
+Utils (src/utils/)  ←── validation, browser, formatting, llm helpers
 Benchmarks (benchmarks/)  ←── evaluation runners (read-only, no I/O side effects)
 ```
 
@@ -63,22 +64,22 @@ Benchmarks (benchmarks/)  ←── evaluation runners (read-only, no I/O side e
 
 All inter-layer communication uses Pydantic models from `schemas/`. No raw dicts cross layer boundaries in production code paths.
 
-| Schema | Where defined | Produced by | Consumed by |
-| --- | --- | --- | --- |
-| `HealingAnalysis` | `schemas/healing.py` | LLM via `parse_llm_response()` | `planner.py` |
-| `HealingDecision` | `schemas/healing.py` | `planner.py` | `healing_service.py`, `artifact_store.py`, UI |
-| `Evidence` | `schemas/healing.py` | `evidence.py` | `planner.py` |
-| `HealingAction` | `schemas/healing.py` | LLM (nested in HealingAnalysis) | `repair.py` |
-| `ContextSnapshot` | `schemas/artifacts.py` | `context/collector.py` | `evidence.py`, `generator.py` |
-| `TraceMetadata` | `schemas/artifacts.py` | `llm/router.py` | `observability/tracer.py` |
-| `LLMRequest` / `LLMResponse` | `src/llm/router.py` | `LLMRouter.complete_*()` | all callers |
-| `GenerationResult` | `schemas/generation.py` | internal (validates raw LLM code) | `generator.py` |
-| `GenerationDecision` | `schemas/generation.py` | `generator.py` | `generation_service.py`, `artifact_store`, UI |
-| `VisionDecision` | `schemas/generation.py` | `vision_service.py` | `workbench_service.py`, UI |
-| `ProvenanceRecord` | `schemas/shared.py` | (base class) | `HealingDecision`, `GenerationDecision`, `VisionDecision` |
-| `LLMConfig` | `schemas/shared.py` | `src/llm/__init__.py` | `LLMClientFactory` |
-| `BenchmarkRun` | `schemas/evaluation.py` | benchmark runners | `workbench_service.py`, reports |
-| `RunResult` | `schemas/shared.py` | `healing/runner.py` | `healing_service.py` |
+| Schema                       | Where defined           | Produced by                       | Consumed by                                               |
+| ---------------------------- | ----------------------- | --------------------------------- | --------------------------------------------------------- |
+| `HealingAnalysis`            | `schemas/healing.py`    | LLM via `parse_llm_response()`    | `planner.py`                                              |
+| `HealingDecision`            | `schemas/healing.py`    | `planner.py`                      | `healing_service.py`, `artifact_store.py`, UI             |
+| `Evidence`                   | `schemas/healing.py`    | `evidence.py`                     | `planner.py`                                              |
+| `HealingAction`              | `schemas/healing.py`    | LLM (nested in HealingAnalysis)   | `repair.py`                                               |
+| `ContextSnapshot`            | `schemas/artifacts.py`  | `context/collector.py`            | `evidence.py`, `generator.py`                             |
+| `TraceMetadata`              | `schemas/artifacts.py`  | `llm/router.py`                   | `observability/tracer.py`                                 |
+| `LLMRequest` / `LLMResponse` | `src/llm/router.py`     | `LLMRouter.complete_*()`          | all callers                                               |
+| `GenerationResult`           | `schemas/generation.py` | internal (validates raw LLM code) | `generator.py`                                            |
+| `GenerationDecision`         | `schemas/generation.py` | `generator.py`                    | `generation_service.py`, `artifact_store`, UI             |
+| `VisionDecision`             | `schemas/generation.py` | `vision_service.py`               | `workbench_service.py`, `artifact_store.py`, UI           |
+| `ProvenanceRecord`           | `schemas/shared.py`     | (base class)                      | `HealingDecision`, `GenerationDecision`, `VisionDecision` |
+| `LLMConfig`                  | `schemas/shared.py`     | `src/llm/__init__.py`             | `LLMClientFactory`                                        |
+| `BenchmarkRun`               | `schemas/evaluation.py` | benchmark runners                 | `workbench_service.py`, reports                           |
+| `RunResult`                  | `schemas/shared.py`     | `healing/runner.py`               | `healing_service.py`                                      |
 
 ---
 
@@ -98,17 +99,17 @@ All inter-layer communication uses Pydantic models from `schemas/`. No raw dicts
 
 ## Component Summaries
 
-| Component | File(s) | Responsibility |
-| --- | --- | --- |
-| Generation pipeline | `src/agents/generator.py` | Context collection → prompt → LLM → GenerationResult |
-| Vision pipeline | `src/services/vision_service.py` | Screenshot → vision LLM → TypeScript → VisionDecision |
-| Healing pipeline | `src/healing/` (7 modules) | Failure diagnosis, repair, verification, artifact emission |
-| Context collection | `src/context/` (7 modules) | Single browser session → ContextSnapshot |
-| LLM routing | `src/llm/` (4 modules) | Provider config, retry, fallback, response capture |
-| Observability | `src/observability/` (3 modules) | Thread-local session tracking → JSONL spans |
-| Evaluation | `benchmarks/` (3 runners + mutator) | Dataset-driven reproducible benchmarks |
-| Data contracts | `schemas/` (5 modules) | Pydantic models for all structured data |
-| Prompt management | `prompts/` + `prompt_loader.py` | External markdown + manifest.json versioning |
+| Component           | File(s)                             | Responsibility                                             |
+| ------------------- | ----------------------------------- | ---------------------------------------------------------- |
+| Generation pipeline | `src/agents/generator.py`           | Context collection → prompt → LLM → GenerationResult       |
+| Vision pipeline     | `src/services/vision_service.py`    | Screenshot → vision LLM → TypeScript → VisionDecision      |
+| Healing pipeline    | `src/healing/` (7 modules)          | Failure diagnosis, repair, verification, artifact emission |
+| Context collection  | `src/context/` (7 modules)          | Single browser session → ContextSnapshot                   |
+| LLM routing         | `src/llm/` (4 modules)              | Provider config, retry, fallback, response capture         |
+| Observability       | `src/observability/` (3 modules)    | Thread-local session tracking → JSONL spans                |
+| Evaluation          | `benchmarks/` (3 runners + mutator) | Dataset-driven reproducible benchmarks                     |
+| Data contracts      | `schemas/` (5 modules)              | Pydantic models for all structured data                    |
+| Prompt management   | `prompts/` + `prompt_loader.py`     | External markdown + manifest.json versioning               |
 
 ---
 

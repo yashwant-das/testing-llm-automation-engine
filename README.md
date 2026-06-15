@@ -27,19 +27,19 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
 
 ## Core Capabilities
 
-| Capability | Implementation |
-| --- | --- |
-| Test generation from DOM + accessibility tree | `src/services/generation_service.py` → `src/agents/generator.py` |
-| Test generation from screenshot | `src/services/vision_service.py` |
-| Self-healing pipeline | `src/services/healing_service.py` → `src/healing/` |
-| Structured LLM outputs | `schemas/` + `src/utils/llm.parse_llm_response()` |
-| AST-based code repair | `src/healing/repair.py` + `scripts/ast_repair.js` (ts-morph) |
-| Heuristic failure classification | `src/healing/classifier.py` |
-| Rich context collection | `src/context/` (DOM, accessibility tree, console errors, network errors, locator candidates) |
-| LLM routing with retry and fallback | `src/llm/router.py` |
-| JSONL observability traces | `src/observability/` |
-| Evaluation benchmarks | `benchmarks/` |
-| Full decision provenance | `HealingDecision.to_markdown()` (Phase 9 explainability fields) |
+| Capability                                    | Implementation                                                                               |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| Test generation from DOM + accessibility tree | `src/services/generation_service.py` → `src/agents/generator.py`                             |
+| Test generation from screenshot               | `src/services/vision_service.py`                                                             |
+| Self-healing pipeline                         | `src/services/healing_service.py` → `src/healing/`                                           |
+| Structured LLM outputs                        | `schemas/` + `src/utils/llm.parse_llm_response()`                                            |
+| AST-based code repair                         | `src/healing/repair.py` + `scripts/ast_repair.js` (ts-morph)                                 |
+| Heuristic failure classification              | `src/healing/classifier.py`                                                                  |
+| Rich context collection                       | `src/context/` (DOM, accessibility tree, console errors, network errors, locator candidates) |
+| LLM routing with retry and fallback           | `src/llm/router.py`                                                                          |
+| JSONL observability traces                    | `src/observability/`                                                                         |
+| Evaluation benchmarks                         | `benchmarks/`                                                                                |
+| Full decision provenance                      | `HealingDecision.to_markdown()` (Phase 9 explainability fields)                              |
 
 ---
 
@@ -51,17 +51,17 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
 │  Overview │ Generation │ Healing │ Vision │ Artifacts │     │
 │  Evaluation │ Traces │ Models                               │
 └──────────────────────────────┬──────────────────────────────┘
-                               │ calls only src/services/
+                               │ UI logic calls src/services/
 ┌──────────────────────────────▼──────────────────────────────┐
 │                      src/services/                          │
-│  generation_service  healing_service  workbench_service     │
-│                   (streaming generators)                    │
+│  generation_service  healing_service    vision_service      │
+│  workbench_service   (streaming generators)                 │
 └──────────────────────────────┬──────────────────────────────┘
                                │
 ┌──────────────────────────────▼──────────────────────────────┐
-│                      Pipeline Layer                         │
-│  src/healing/   src/context/                                │
-│  src/agents/    src/observability/                          │
+│                Pipeline Layer & Utilities                   │
+│  src/healing/   src/context/   src/agents/                  │
+│  src/observability/            src/utils/                   │
 └──────────────────────────────┬──────────────────────────────┘
                                │
                     ┌──────────▼──────────┐
@@ -70,7 +70,7 @@ The secondary goal is equally important: **demonstrate how to build reliable AI 
                     └─────────────────────┘
 ```
 
-The UI layer calls only `src/services/`. Services call pipeline modules. Pipeline modules call `src/llm/` for LLM access and `schemas/` for data contracts. Every LLM call is recorded in `logs/traces.jsonl`. Every healing session produces a `HealingDecision` artifact in `tests/artifacts/`.
+The UI layer calls `src/services/` for business logic (and uses `src/observability/` / `src/utils/` for initialization). Services call pipeline modules. Pipeline modules call `src/llm/` for LLM access and `schemas/` for data contracts. Every LLM call is recorded in `logs/traces.jsonl`. Every pipeline session produces a decision artifact (Healing, Generation, or Vision) in `tests/artifacts/`.
 
 ---
 
@@ -163,7 +163,7 @@ Enter a URL and instruction. The pipeline captures a screenshot, sends it to a v
 
 ### Artifact Inspector
 
-Browse `tests/artifacts/healing_decision_*.json` artifacts written after every healing session. Selecting an artifact renders the full markdown report alongside the raw JSON. The report includes Phase 9 provenance fields: which model, which prompt version and hash, how long the planning took, and which evidence snapshot was used.
+Browse decision artifacts written to `tests/artifacts/` after every pipeline run (healing, generation, and vision). Selecting an artifact renders the full markdown report alongside the raw JSON. The report includes Phase 9 provenance fields: which model, which prompt version and hash, how long the planning took, and which evidence snapshot was used.
 
 ### Evaluation
 
@@ -188,7 +188,7 @@ Displays active model configuration from environment variables (`LM_STUDIO_TEXT_
 # Via the service layer (correct entry point)
 uv run python -c "
 from src.services.healing_service import heal_test_streaming
-for step in heal_test_streaming('tests/generated/broken_example.spec.ts', 3):
+for step in heal_test_streaming('tests/generated/my_broken_test.spec.ts', 3):
     print(step[0])
 "
 ```
@@ -361,16 +361,16 @@ The Trace Inspector tab in the workbench renders these tables without needing `j
 
 ## Technology Choices
 
-| Decision | Choice | Why |
-| --- | --- | --- |
-| Schema validation | Pydantic v2 | Runtime validation, JSON schema export, field coercion, IDE completions. See ADR-001. |
-| LLM client | OpenAI SDK (thin wrapper) | Both LM Studio and Ollama expose OpenAI-compatible APIs. LiteLLM adds 40 MB for no benefit here. See ADR-007. |
-| TypeScript AST repair | ts-morph (Node.js subprocess) | TypeScript-native, read/write AST, formatting-preserving. Babel strips types; tree-sitter is read-only. See ADR-003. |
-| Observability | Custom JSONL tracer | Zero new dependencies. LLMRouter already captures all required signals. `jq` satisfies all query needs. See ADR-004. |
-| Prompt storage | External markdown files + `manifest.json` | Diffable, human-editable, independently versioned. See ADR-005. |
-| UI framework | Gradio | Streaming generators map directly to Gradio's `yield`-based progress model. |
-| UI-to-pipeline boundary | Service layer | `app.py` imports only from `src/services/`. Services import from pipeline modules. See ADR-006. |
-| Browser context | Single Playwright session | Context collector opens one browser, collects DOM + a11y tree + console + network + screenshot, closes. |
+| Decision                | Choice                                    | Why                                                                                                                  |
+| ----------------------- | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Schema validation       | Pydantic v2                               | Runtime validation, JSON schema export, field coercion, IDE completions. See ADR-001.                                |
+| LLM client              | OpenAI SDK (thin wrapper)                 | Both LM Studio and Ollama expose OpenAI-compatible APIs. LiteLLM adds 40 MB for no benefit here. See ADR-007.        |
+| TypeScript AST repair   | ts-morph (Node.js subprocess)             | TypeScript-native, read/write AST, formatting-preserving. Babel strips types; tree-sitter is read-only. See ADR-003. |
+| Observability           | Custom JSONL tracer                       | Zero new dependencies. LLMRouter already captures all required signals. `jq` satisfies all query needs. See ADR-004. |
+| Prompt storage          | External markdown files + `manifest.json` | Diffable, human-editable, independently versioned. See ADR-005.                                                      |
+| UI framework            | Gradio                                    | Streaming generators map directly to Gradio's `yield`-based progress model.                                          |
+| UI-to-pipeline boundary | Service layer                             | `app.py` imports only from `src/services/`. Services import from pipeline modules. See ADR-006.                      |
+| Browser context         | Single Playwright session                 | Context collector opens one browser, collects DOM + a11y tree + console + network + screenshot, closes.              |
 
 ---
 

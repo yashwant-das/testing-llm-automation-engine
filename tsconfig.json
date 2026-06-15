@@ -13,10 +13,5 @@
     "rootDir": "."
   },
   "include": ["tests/**/*", "playwright.config.ts", "src/**/*"],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "tests/fixtures",
-    ".venv"
-  ]
+  "exclude": ["node_modules", "dist", "tests/fixtures", ".venv"]
 }

@@ -6,7 +6,7 @@ This guide covers building and running the AI Engineering Workbench in Docker, i
 
 - Docker installed and running
 - **Either** LM Studio (Server ON, Port 1234) **OR** Ollama (Server ON, Port 11434) running
-- A broken test file in `tests/generated/` (e.g., `broken_example.spec.ts`)
+- A broken test file in `tests/generated/` (e.g., `my_broken_test.spec.ts`)
 
 ## Building the Docker Image
 
@@ -139,7 +139,7 @@ npx playwright test
 **Run a Specific Test:**
 
 ```bash
-npx playwright test tests/generated/broken_example.spec.ts
+npx playwright test tests/generated/my_broken_test.spec.ts
 ```
 
 **Run with Verbose Output:**
@@ -173,10 +173,10 @@ If a test fails, invoke the Healer agent manually to fix the code:
 
 ```bash
 # Run healer with default 3 attempts (matches Web UI)
-uv run python -m src.agents.healer tests/generated/broken_example.spec.ts
+uv run python -m src.agents.healer tests/generated/my_broken_test.spec.ts
 
 # Or run with custom retry limit
-uv run python -m src.agents.healer tests/generated/broken_example.spec.ts --max-retries 5
+uv run python -m src.agents.healer tests/generated/my_broken_test.spec.ts --max-retries 5
 ```
 
 **Expected Workflow:**

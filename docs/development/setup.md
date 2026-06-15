@@ -6,12 +6,12 @@
 
 ## Prerequisites
 
-| Tool | Version | Purpose |
-| --- | --- | --- |
-| Python | 3.11+ | Pipeline and UI |
-| Node.js | 18+ | Playwright + AST repair (ts-morph) |
-| `uv` | any | Python dependency management |
-| LM Studio or Ollama | any | Local LLM inference |
+| Tool                | Version | Purpose                            |
+| ------------------- | ------- | ---------------------------------- |
+| Python              | 3.11+   | Pipeline and UI                    |
+| Node.js             | 18+     | Playwright + AST repair (ts-morph) |
+| `uv`                | any     | Python dependency management       |
+| LM Studio or Ollama | any     | Local LLM inference                |
 
 ---
 
@@ -143,16 +143,16 @@ node scripts/ast_repair.js  # should print usage, not an error
 
 ## Environment Variables Reference
 
-| Variable | Active when | Default | Description |
-| --- | --- | --- | --- |
-| `LLM_PROVIDER` | always | `lm_studio` | `"lm_studio"` or `"ollama"` |
-| `LM_STUDIO_URL` | lm_studio | `http://localhost:1234/v1` | LM Studio server URL |
-| `LM_STUDIO_TEXT_MODEL` | lm_studio | `qwen/qwen3.6-35b-a3b` | Text/code model name |
-| `LM_STUDIO_VISION_MODEL` | lm_studio | `google/gemma-4-26b-a4b` | Vision model name |
-| `LM_STUDIO_API_KEY` | lm_studio | `lm-studio` | Any non-empty string |
-| `OLLAMA_URL` | ollama | `http://localhost:11434/v1` | Ollama server URL |
-| `OLLAMA_TEXT_MODEL` | ollama | `qwen3.6:latest` | Text/code model name |
-| `OLLAMA_VISION_MODEL` | ollama | `gemma4:26b` | Vision model name |
-| `LOG_LEVEL` | always | `INFO` | `DEBUG` · `INFO` · `WARNING` · `ERROR` |
+| Variable                 | Active when | Default                     | Description                            |
+| ------------------------ | ----------- | --------------------------- | -------------------------------------- |
+| `LLM_PROVIDER`           | always      | `lm_studio`                 | `"lm_studio"` or `"ollama"`            |
+| `LM_STUDIO_URL`          | lm_studio   | `http://localhost:1234/v1`  | LM Studio server URL                   |
+| `LM_STUDIO_TEXT_MODEL`   | lm_studio   | `qwen/qwen3.6-35b-a3b`      | Text/code model name                   |
+| `LM_STUDIO_VISION_MODEL` | lm_studio   | `google/gemma-4-26b-a4b`    | Vision model name                      |
+| `LM_STUDIO_API_KEY`      | lm_studio   | `lm-studio`                 | Any non-empty string                   |
+| `OLLAMA_URL`             | ollama      | `http://localhost:11434/v1` | Ollama server URL                      |
+| `OLLAMA_TEXT_MODEL`      | ollama      | `qwen3.6:latest`            | Text/code model name                   |
+| `OLLAMA_VISION_MODEL`    | ollama      | `gemma4:26b`                | Vision model name                      |
+| `LOG_LEVEL`              | always      | `INFO`                      | `DEBUG` · `INFO` · `WARNING` · `ERROR` |
 
 Full variable descriptions: [docs/env-variables.md](../env-variables.md)

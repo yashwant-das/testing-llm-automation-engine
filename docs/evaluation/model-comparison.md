@@ -30,13 +30,13 @@ jq '{model: .config.model, passed: .passed, total: .total, mean_score: .mean_sco
 
 Two runs are comparable only when:
 
-| Field | Must be equal |
-| --- | --- |
-| `dataset_version` | Same dataset |
-| `prompt_hash` | Same prompt content |
-| `temperature` | Same (ideally 0.0) |
-| `seed` | Same (ideally fixed) |
-| `benchmark_type` | Same type |
+| Field             | Must be equal        |
+| ----------------- | -------------------- |
+| `dataset_version` | Same dataset         |
+| `prompt_hash`     | Same prompt content  |
+| `temperature`     | Same (ideally 0.0)   |
+| `seed`            | Same (ideally fixed) |
+| `benchmark_type`  | Same type            |
 
 Different `model` and `model_version` is expected — that is the point of the comparison.
 

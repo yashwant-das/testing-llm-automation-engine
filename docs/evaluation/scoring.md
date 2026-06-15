@@ -40,12 +40,12 @@ Score: 1.0 (pass) or 0.0 (fail).
 
 Up to four checks:
 
-| Check | When active | What is tested |
-| --- | --- | --- |
-| `classification` | `expected_failure_type` is set | classified_type == expected |
-| `code-modified` | `code_must_change: true` | repaired_code != original_code |
-| `fixed(pattern)` | `must_fix_pattern` is set | pattern NOT in repaired_code |
-| `contains(pattern)` | `fixed_code_must_contain` is non-empty | each pattern IN repaired_code |
+| Check               | When active                            | What is tested                 |
+| ------------------- | -------------------------------------- | ------------------------------ |
+| `classification`    | `expected_failure_type` is set         | classified_type == expected    |
+| `code-modified`     | `code_must_change: true`               | repaired_code != original_code |
+| `fixed(pattern)`    | `must_fix_pattern` is set              | pattern NOT in repaired_code   |
+| `contains(pattern)` | `fixed_code_must_contain` is non-empty | each pattern IN repaired_code  |
 
 Score = `checks_passed / (checks_passed + checks_failed)`.
 
@@ -57,11 +57,11 @@ Example: a case with 4 checks where 3 pass has `score=0.75`, `passed=False`.
 
 `BenchmarkRun` computes:
 
-| Metric | Formula | Interpretation |
-| --- | --- | --- |
-| `pass_rate` | `passed / total` | Fraction of cases that fully pass. Use for regression detection. |
-| `mean_score` | `sum(scores) / total` | Average partial-credit score. Use for tracking improvement trends. |
-| `mean_duration_ms` | `sum(durations) / total` | Average time per case. Use for latency tracking. |
+| Metric             | Formula                  | Interpretation                                                     |
+| ------------------ | ------------------------ | ------------------------------------------------------------------ |
+| `pass_rate`        | `passed / total`         | Fraction of cases that fully pass. Use for regression detection.   |
+| `mean_score`       | `sum(scores) / total`    | Average partial-credit score. Use for tracking improvement trends. |
+| `mean_duration_ms` | `sum(durations) / total` | Average time per case. Use for latency tracking.                   |
 
 ---
 

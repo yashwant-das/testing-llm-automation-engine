@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: ["**"]
+    branches: ['**']
   pull_request:
-    branches: ["**"]
+    branches: ['**']
 
 jobs:
   lint:
@@ -16,8 +16,8 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
-          cache: "npm"
+          node-version: '20'
+          cache: 'npm'
 
       - name: Install Node dependencies
         run: npm ci
@@ -25,7 +25,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v5
         with:
-          version: "latest"
+          version: 'latest'
 
       - name: Install Python dependencies
         run: uv sync --group dev
@@ -44,4 +44,3 @@ jobs:
 
       - name: Markdown lint
         run: npm run lint:md
-

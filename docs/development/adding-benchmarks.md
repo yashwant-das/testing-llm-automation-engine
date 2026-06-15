@@ -12,13 +12,13 @@ The fastest path. No code changes required.
 
 ```typescript
 // tests/fixtures/broken_role.spec.ts
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 
-test("Submit form", async ({ page }) => {
-  await page.goto("https://example.com/form");
+test('Submit form', async ({ page }) => {
+  await page.goto('https://example.com/form');
   // BUG: wrong role name
-  await page.getByRole("button", { name: "Send" }).click();  // should be "Submit"
-  await expect(page.locator(".success")).toBeVisible();
+  await page.getByRole('button', { name: 'Send' }).click(); // should be "Submit"
+  await expect(page.locator('.success')).toBeVisible();
 });
 ```
 

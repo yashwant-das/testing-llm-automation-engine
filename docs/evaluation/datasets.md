@@ -40,17 +40,17 @@ Each dataset type has a fixed schema enforced by Pydantic models in `benchmarks/
 
 ### Field Reference
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `id` | string | Unique case identifier (`heal-NNN`) |
-| `description` | string | Human-readable label |
-| `broken_test_file` | string | Path relative to project root |
-| `injected_failure_type` | string | The `FailureType` enum value that was introduced |
-| `error_log` | string | Synthetic error log the broken test would produce |
-| `checks.expected_failure_type` | string or null | Expected heuristic classification result |
-| `checks.must_fix_pattern` | string or null | String that must NOT appear in repaired code |
-| `checks.fixed_code_must_contain` | string[] | Strings that MUST appear in repaired code |
-| `checks.code_must_change` | bool | Whether any code change is required |
+| Field                            | Type           | Description                                       |
+| -------------------------------- | -------------- | ------------------------------------------------- |
+| `id`                             | string         | Unique case identifier (`heal-NNN`)               |
+| `description`                    | string         | Human-readable label                              |
+| `broken_test_file`               | string         | Path relative to project root                     |
+| `injected_failure_type`          | string         | The `FailureType` enum value that was introduced  |
+| `error_log`                      | string         | Synthetic error log the broken test would produce |
+| `checks.expected_failure_type`   | string or null | Expected heuristic classification result          |
+| `checks.must_fix_pattern`        | string or null | String that must NOT appear in repaired code      |
+| `checks.fixed_code_must_contain` | string[]       | Strings that MUST appear in repaired code         |
+| `checks.code_must_change`        | bool           | Whether any code change is required               |
 
 ### Valid `FailureType` values
 
@@ -100,12 +100,12 @@ result = mutate(Path("tests/fixtures/broken_selector.spec.ts"), MutationType.SEL
 
 Mutation types and the failure type they produce:
 
-| MutationType | What changes | Produces |
-| --- | --- | --- |
-| `SELECTOR_DRIFT` | Replaces a valid locator with a broken selector | `LOCATOR_NOT_FOUND` |
-| `TIMEOUT_TOO_SHORT` | Reduces `timeout: N` values to 1000ms | `TIMEOUT` |
-| `MISSING_IMPORT` | Removes a named import from `@playwright/test` | `JAVASCRIPT_ERROR` |
-| `ASSERTION_SWAP` | Swaps an assertion method (e.g. `toBeVisible` → `toBe`) | `ASSERTION_FAILED` |
+| MutationType        | What changes                                            | Produces            |
+| ------------------- | ------------------------------------------------------- | ------------------- |
+| `SELECTOR_DRIFT`    | Replaces a valid locator with a broken selector         | `LOCATOR_NOT_FOUND` |
+| `TIMEOUT_TOO_SHORT` | Reduces `timeout: N` values to 1000ms                   | `TIMEOUT`           |
+| `MISSING_IMPORT`    | Removes a named import from `@playwright/test`          | `JAVASCRIPT_ERROR`  |
+| `ASSERTION_SWAP`    | Swaps an assertion method (e.g. `toBeVisible` → `toBe`) | `ASSERTION_FAILED`  |
 
 ---
 

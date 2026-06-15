@@ -8,24 +8,24 @@
 
 The project has 556 Python unit tests across 16 files. All tests run without a live LLM, live browser, or network connection.
 
-| File | What it tests | Key pattern |
-| --- | --- | --- |
-| `unit_test_schemas.py` | Pydantic schema validation and coercion | Model construction, field defaults, validators |
-| `unit_test_healing.py` | Healing pipeline end-to-end | Mocked LLMRouter, mocked subprocess |
-| `unit_test_classification.py` | Heuristic failure classifier | Pure function — no mocks needed |
-| `unit_test_fixer.py` | String repair logic | Pure function — fixture code strings |
-| `unit_test_ast_repair.py` | AST repair pipeline | Real Node.js subprocess (requires Node.js) |
-| `unit_test_llm.py` | LLM router, client, registry, policies | Mocked OpenAI client |
-| `unit_test_json.py` | JSON extraction utilities | String inputs |
-| `unit_test_validation.py` | Input validation | Edge cases, invalid inputs |
-| `unit_test_context.py` | Context collection modules | Mocked Playwright page |
-| `unit_test_observability.py` | Tracer, writer, spans | Real file I/O (temp directory) |
-| `unit_test_explainability.py` | HealingDecision provenance fields | Schema, round-trip, markdown rendering |
-| `unit_test_evaluation.py` | Benchmark runners and evaluators | Pure functions + fixture datasets |
-| `unit_test_provenance.py` | GenerationDecision and VisionDecision to_markdown() | Schema construction, markdown output |
-| `unit_test_information_architecture.py` | Workbench service — system overview, artifact listing | workbench_service functions |
-| `unit_test_visibility.py` | Evidence rendering in decision reports | Context inspector, timeline output |
-| `unit_test_workbench_eval.py` | Benchmark report saving and display in workbench | workbench_service evaluation functions |
+| File                                    | What it tests                                         | Key pattern                                    |
+| --------------------------------------- | ----------------------------------------------------- | ---------------------------------------------- |
+| `unit_test_schemas.py`                  | Pydantic schema validation and coercion               | Model construction, field defaults, validators |
+| `unit_test_healing.py`                  | Healing pipeline end-to-end                           | Mocked LLMRouter, mocked subprocess            |
+| `unit_test_classification.py`           | Heuristic failure classifier                          | Pure function — no mocks needed                |
+| `unit_test_fixer.py`                    | String repair logic                                   | Pure function — fixture code strings           |
+| `unit_test_ast_repair.py`               | AST repair pipeline                                   | Real Node.js subprocess (requires Node.js)     |
+| `unit_test_llm.py`                      | LLM router, client, registry, policies                | Mocked OpenAI client                           |
+| `unit_test_json.py`                     | JSON extraction utilities                             | String inputs                                  |
+| `unit_test_validation.py`               | Input validation                                      | Edge cases, invalid inputs                     |
+| `unit_test_context.py`                  | Context collection modules                            | Mocked Playwright page                         |
+| `unit_test_observability.py`            | Tracer, writer, spans                                 | Real file I/O (temp directory)                 |
+| `unit_test_explainability.py`           | HealingDecision provenance fields                     | Schema, round-trip, markdown rendering         |
+| `unit_test_evaluation.py`               | Benchmark runners and evaluators                      | Pure functions + fixture datasets              |
+| `unit_test_provenance.py`               | GenerationDecision and VisionDecision to_markdown()   | Schema construction, markdown output           |
+| `unit_test_information_architecture.py` | Workbench service — system overview, artifact listing | workbench_service functions                    |
+| `unit_test_visibility.py`               | Evidence rendering in decision reports                | Context inspector, timeline output             |
+| `unit_test_workbench_eval.py`           | Benchmark report saving and display in workbench      | workbench_service evaluation functions         |
 
 ---
 

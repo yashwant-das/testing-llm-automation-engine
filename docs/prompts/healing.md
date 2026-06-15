@@ -14,11 +14,11 @@ The healer prompt instructs the LLM to diagnose a failing Playwright test and pr
 
 The healer prompt is a system prompt. The calling code (`src/healing/planner.py`) injects three values at runtime:
 
-| Placeholder | Value | Example |
-| --- | --- | --- |
-| `{failure_type}` | Heuristic diagnosis | `"TIMEOUT"` |
-| `{confidence}` | Heuristic confidence | `"1.00"` |
-| `{reason}` | Heuristic reason string | `"TimeoutError pattern matched"` |
+| Placeholder      | Value                   | Example                          |
+| ---------------- | ----------------------- | -------------------------------- |
+| `{failure_type}` | Heuristic diagnosis     | `"TIMEOUT"`                      |
+| `{confidence}`   | Heuristic confidence    | `"1.00"`                         |
+| `{reason}`       | Heuristic reason string | `"TimeoutError pattern matched"` |
 
 The user message contains:
 
@@ -63,14 +63,14 @@ The schema is validated by `parse_llm_response(raw_content, HealingAnalysis)`. I
 
 The prompt includes a repair strategy selection guide that instructs the LLM to choose the most specific strategy:
 
-| Strategy | When to use | `original_code` | `fixed_code` |
-| --- | --- | --- | --- |
-| `selector_replace` | A locator selector changed | Old locator call | New locator call |
-| `import_add` | A required import is missing | `""` | Full import statement |
-| `timeout_adjust` | A timeout value needs to change | Object with old timeout | Object with new timeout |
-| `role_argument` | A getByRole name option is wrong | Old getByRole call | New getByRole call |
-| `assertion_swap` | An assertion method needs renaming | Old assertion call | New assertion call |
-| `string_replace` | Catch-all (none of the above) | Old code block | New code block |
+| Strategy           | When to use                        | `original_code`         | `fixed_code`            |
+| ------------------ | ---------------------------------- | ----------------------- | ----------------------- |
+| `selector_replace` | A locator selector changed         | Old locator call        | New locator call        |
+| `import_add`       | A required import is missing       | `""`                    | Full import statement   |
+| `timeout_adjust`   | A timeout value needs to change    | Object with old timeout | Object with new timeout |
+| `role_argument`    | A getByRole name option is wrong   | Old getByRole call      | New getByRole call      |
+| `assertion_swap`   | An assertion method needs renaming | Old assertion call      | New assertion call      |
+| `string_replace`   | Catch-all (none of the above)      | Old code block          | New code block          |
 
 The repair strategy selection matters because it determines which AST transformation `scripts/ast_repair.js` will apply. Choosing `selector_replace` triggers file-wide selector replacement; choosing `string_replace` falls back to the sliding-window string matcher.
 
@@ -88,7 +88,7 @@ The repair strategy selection matters because it determines which AST transforma
 
 ## Version History
 
-| Version | Change |
-| --- | --- |
-| 1 | Initial healer prompt with basic diagnosis + code fix |
-| 2 | Added `repair_strategy` field (Phase 5) + `confidence_rationale` + `root_cause_evidence` (Phase 9) |
+| Version | Change                                                                                             |
+| ------- | -------------------------------------------------------------------------------------------------- |
+| 1       | Initial healer prompt with basic diagnosis + code fix                                              |
+| 2       | Added `repair_strategy` field (Phase 5) + `confidence_rationale` + `root_cause_evidence` (Phase 9) |

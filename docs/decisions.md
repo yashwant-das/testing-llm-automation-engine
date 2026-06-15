@@ -21,7 +21,7 @@ Replace all `@dataclass` models with Pydantic `BaseModel` subclasses, housed in 
 ### Alternatives Considered
 
 - **Keep dataclasses + add manual validation:** More code, no schema export, still no retry-on-parse-failure.
-- **attrs:** Validation via validators, but no JSON schema generation, less OpenAI tool\_call integration.
+- **attrs:** Validation via validators, but no JSON schema generation, less OpenAI tool_call integration.
 - **msgspec:** Fastest option, but less ecosystem support and no native OpenAI schema integration.
 - **Pydantic v2:** Native JSON schema generation, OpenAI `response_format` integration, field validators, coercion. Already installed as a transitive dependency.
 
@@ -157,7 +157,7 @@ Keep external markdown files. Add versioning via a `prompts/manifest.json` that 
 ### Consequences
 
 - **Positive:** Prompts remain diffable, human-editable, independently versioned.
-- **Negative:** File I/O on every call (mitigated by caching in prompt\_loader).
+- **Negative:** File I/O on every call (mitigated by caching in prompt_loader).
 - **Resolved (Phase 9):** `prompts/manifest.json` implemented with version and hash fields. `prompt_loader.py` exposes `get_prompt_version()` and `get_prompt_hash()`. Both recorded in every `HealingDecision` artifact.
 
 ---
@@ -361,15 +361,15 @@ The original `src/agents/healer.py` was a god module: 600+ lines mixing failure 
 
 Decompose `src/agents/healer.py` into 7 focused modules in `src/healing/`:
 
-| Module | Single Responsibility |
-| --- | --- |
-| `classifier.py` | Heuristic failure classification |
-| `evidence.py` | Evidence → HealingDecision field extraction |
-| `planner.py` | LLM prompt construction and response parsing |
-| `repair.py` | AST and string repair dispatch |
-| `verifier.py` | Playwright test re-run and result parsing |
-| `artifact_store.py` | JSON artifact persistence |
-| `runner.py` | Orchestration — calls the 6 above in sequence |
+| Module              | Single Responsibility                         |
+| ------------------- | --------------------------------------------- |
+| `classifier.py`     | Heuristic failure classification              |
+| `evidence.py`       | Evidence → HealingDecision field extraction   |
+| `planner.py`        | LLM prompt construction and response parsing  |
+| `repair.py`         | AST and string repair dispatch                |
+| `verifier.py`       | Playwright test re-run and result parsing     |
+| `artifact_store.py` | JSON artifact persistence                     |
+| `runner.py`         | Orchestration — calls the 6 above in sequence |
 
 ### Rationale
 

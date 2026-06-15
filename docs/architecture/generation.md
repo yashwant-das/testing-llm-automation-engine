@@ -36,7 +36,7 @@ sequenceDiagram
     participant GEN as generator.py
     participant CTX as context/collector
     participant LLM as LLMRouter
-    participant FS as filesystem
+    participant ART as artifact_store
 
     UI->>SVC: generate_test_streaming(url, scenario)
     SVC->>GEN: generate_test_script(url, scenario)
@@ -56,8 +56,8 @@ sequenceDiagram
     LLM-->>GEN: LLMResponse(content=<TypeScript code>)
     GEN->>GEN: extract_code_block(content)
     GEN->>GEN: build GenerationDecision (code + full provenance)
-    GEN->>FS: write tests/generated/<slug>.spec.ts
     GEN-->>SVC: GenerationDecision
+    SVC->>ART: emit_decision(decision, "generation_decision")
     SVC-->>UI: yield (timeline_md, code)
 ```
 
@@ -65,13 +65,13 @@ sequenceDiagram
 
 The generator sends five types of context to the LLM:
 
-| Context type | Source | Purpose |
-| --- | --- | --- |
-| Cleaned HTML | `context/dom.py` (BeautifulSoup) | Structural elements, IDs, data-test attributes |
-| Accessibility tree | `context/accessibility.py` | ARIA roles and names for `getByRole()` locators |
-| Locator candidates | `context/locator_candidates.py` | Pre-extracted `getByRole()` strings from the a11y tree |
-| Console errors | `context/console.py` | JavaScript errors during page load |
-| Network errors | `context/network.py` | Failed requests (4xx, 5xx, CORS) during page load |
+| Context type       | Source                           | Purpose                                                |
+| ------------------ | -------------------------------- | ------------------------------------------------------ |
+| Cleaned HTML       | `context/dom.py` (BeautifulSoup) | Structural elements, IDs, data-test attributes         |
+| Accessibility tree | `context/accessibility.py`       | ARIA roles and names for `getByRole()` locators        |
+| Locator candidates | `context/locator_candidates.py`  | Pre-extracted `getByRole()` strings from the a11y tree |
+| Console errors     | `context/console.py`             | JavaScript errors during page load                     |
+| Network errors     | `context/network.py`             | Failed requests (4xx, 5xx, CORS) during page load      |
 
 All five are collected in a single Playwright browser session. One session = one cold start = one URL load. The `ContextSnapshot` Pydantic model carries all five.
 
@@ -108,7 +108,7 @@ sequenceDiagram
     participant SVC as vision_service
     participant SCR as context/screenshot
     participant LLM as LLMRouter (vision)
-    participant FS as filesystem
+    participant ART as artifact_store
 
     UI->>SVC: analyze_visual_streaming(url, instruction)
     SVC->>SCR: capture_screenshot(url, dir)
@@ -118,7 +118,7 @@ sequenceDiagram
     SVC->>LLM: complete_vision(messages_with_image)
     LLM-->>SVC: LLMResponse(content=<TypeScript code>)
     SVC->>SVC: extract_code_block(content) → VisionDecision (code + provenance)
-    SVC->>FS: write tests/generated/<slug>.spec.ts
+    SVC->>ART: emit_decision(decision, "vision_decision")
     SVC-->>UI: yield (timeline_md, screenshot_path, code)
 ```
 

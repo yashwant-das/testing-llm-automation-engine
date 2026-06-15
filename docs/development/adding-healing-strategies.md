@@ -18,14 +18,14 @@ The LLM does not call `ast_repair.js` directly. It writes a `HealingDecision` co
 
 ## Existing Strategies
 
-| Strategy | `repair_strategy` value | What the AST does |
-| --- | --- | --- |
-| `STRING_REPLACE` | `"string_replace"` | Python-only; no AST script call. Exact or line-normalised string substitution. |
-| `SELECTOR_REPLACE` | `"selector_replace"` | Replaces the first string argument in `locator()`, `getByRole()`, `getByLabel()`, `getByText()`, `getByPlaceholder()` calls project-wide where the argument matches `original_code`. |
-| `IMPORT_ADD` | `"import_add"` | Parses `fixed_code` as an import statement and inserts it at the top of the file. Skips if a matching import already exists. |
-| `TIMEOUT_ADJUST` | `"timeout_adjust"` | Finds `{ timeout: N }` property values in the file and replaces any that match the numeric value in `original_code`. |
-| `ROLE_ARGUMENT` | `"role_argument"` | Finds `getByRole(role, { name: '...' })` calls where `name` matches `original_code` and replaces the name option value. |
-| `ASSERTION_SWAP` | `"assertion_swap"` | Renames an assertion method in `expect(...).<method>()` chains where the method name matches `original_code`. |
+| Strategy           | `repair_strategy` value | What the AST does                                                                                                                                                                    |
+| ------------------ | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `STRING_REPLACE`   | `"string_replace"`      | Python-only; no AST script call. Exact or line-normalised string substitution.                                                                                                       |
+| `SELECTOR_REPLACE` | `"selector_replace"`    | Replaces the first string argument in `locator()`, `getByRole()`, `getByLabel()`, `getByText()`, `getByPlaceholder()` calls project-wide where the argument matches `original_code`. |
+| `IMPORT_ADD`       | `"import_add"`          | Parses `fixed_code` as an import statement and inserts it at the top of the file. Skips if a matching import already exists.                                                         |
+| `TIMEOUT_ADJUST`   | `"timeout_adjust"`      | Finds `{ timeout: N }` property values in the file and replaces any that match the numeric value in `original_code`.                                                                 |
+| `ROLE_ARGUMENT`    | `"role_argument"`       | Finds `getByRole(role, { name: '...' })` calls where `name` matches `original_code` and replaces the name option value.                                                              |
+| `ASSERTION_SWAP`   | `"assertion_swap"`      | Renames an assertion method in `expect(...).<method>()` chains where the method name matches `original_code`.                                                                        |
 
 ---
 
@@ -67,22 +67,22 @@ In `scripts/ast_repair.js`, add a new function and a new `case`:
  * @returns {{ success: boolean, nodesMatched: number }}
  */
 function waitForUpdate(sourceFile, originalCode, fixedCode) {
-    let nodesMatched = 0;
-    sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).forEach(call => {
-        const expr = call.getExpression();
-        if (!expr || !expr.getText().endsWith('waitForSelector')) return;
-        const args = call.getArguments();
-        if (args.length === 0) return;
-        const first = args[0];
-        if (first.getKind() !== SyntaxKind.StringLiteral) return;
-        const val = first.getLiteralText();
-        if (val !== originalCode) return;
+  let nodesMatched = 0;
+  sourceFile.getDescendantsOfKind(SyntaxKind.CallExpression).forEach((call) => {
+    const expr = call.getExpression();
+    if (!expr || !expr.getText().endsWith('waitForSelector')) return;
+    const args = call.getArguments();
+    if (args.length === 0) return;
+    const first = args[0];
+    if (first.getKind() !== SyntaxKind.StringLiteral) return;
+    const val = first.getLiteralText();
+    if (val !== originalCode) return;
 
-        // Replace the first argument with fixedCode
-        first.replaceWithText(JSON.stringify(fixedCode));
-        nodesMatched++;
-    });
-    return { success: nodesMatched > 0, nodesMatched };
+    // Replace the first argument with fixedCode
+    first.replaceWithText(JSON.stringify(fixedCode));
+    nodesMatched++;
+  });
+  return { success: nodesMatched > 0, nodesMatched };
 }
 ```
 

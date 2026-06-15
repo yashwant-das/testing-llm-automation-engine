@@ -31,15 +31,15 @@ The pipeline has seven single-responsibility modules. Each is independently impo
 
 ## Module Responsibilities
 
-| Module | File | Responsibility |
-| --- | --- | --- |
-| Runner | `src/healing/runner.py` | Run Playwright subprocess, capture exit code and output |
-| Evidence | `src/healing/evidence.py` | Extract URL from test code, collect ContextSnapshot, build Evidence |
-| Classifier | `src/healing/classifier.py` | Heuristic regex-based failure classification (no LLM) |
-| Planner | `src/healing/planner.py` | LLM reasoning → HealingDecision with full provenance |
-| Repair | `src/healing/repair.py` | AST-first code repair with string fallback |
-| Verifier | `src/healing/verifier.py` | Re-run test after repair, update decision.verification_passed |
-| Artifact store | `src/healing/artifact_store.py` | Persist HealingDecision + ExecutionTimeline as JSON |
+| Module         | File                            | Responsibility                                                      |
+| -------------- | ------------------------------- | ------------------------------------------------------------------- |
+| Runner         | `src/healing/runner.py`         | Run Playwright subprocess, capture exit code and output             |
+| Evidence       | `src/healing/evidence.py`       | Extract URL from test code, collect ContextSnapshot, build Evidence |
+| Classifier     | `src/healing/classifier.py`     | Heuristic regex-based failure classification (no LLM)               |
+| Planner        | `src/healing/planner.py`        | LLM reasoning → HealingDecision with full provenance                |
+| Repair         | `src/healing/repair.py`         | AST-first code repair with string fallback                          |
+| Verifier       | `src/healing/verifier.py`       | Re-run test after repair, update decision.verification_passed       |
+| Artifact store | `src/healing/artifact_store.py` | Persist HealingDecision + ExecutionTimeline as JSON                 |
 
 ---
 
@@ -102,13 +102,13 @@ sequenceDiagram
 
 The classifier runs **before** the LLM call. It uses regex patterns to fast-path common failures:
 
-| Failure type | Detection pattern | Confidence |
-| --- | --- | --- |
-| `LOCATOR_NOT_FOUND` | `"locator.*could not be found"` or `"resolved to 0 elements"` | 0.70 |
-| `TIMEOUT` | `"TimeoutError"` or `"Timeout \d+ms exceeded"` | 1.00 |
-| `JAVASCRIPT_ERROR` | `"ReferenceError"` or `"TypeError"` | 0.80 |
-| `ASSERTION_FAILED` | `"expect(received).*expected"` | 0.80 |
-| `UNKNOWN` | No pattern matched | 0.00 |
+| Failure type        | Detection pattern                                             | Confidence |
+| ------------------- | ------------------------------------------------------------- | ---------- |
+| `LOCATOR_NOT_FOUND` | `"locator.*could not be found"` or `"resolved to 0 elements"` | 0.70       |
+| `TIMEOUT`           | `"TimeoutError"` or `"Timeout \d+ms exceeded"`                | 1.00       |
+| `JAVASCRIPT_ERROR`  | `"ReferenceError"` or `"TypeError"`                           | 0.80       |
+| `ASSERTION_FAILED`  | `"expect(received).*expected"`                                | 0.80       |
+| `UNKNOWN`           | No pattern matched                                            | 0.00       |
 
 If the classifier returns confidence > 0.8 and the LLM returns `UNKNOWN`, the planner overrides the LLM with the heuristic result. This is the hybrid diagnosis strategy: deterministic where possible, LLM where needed.
 
@@ -151,13 +151,13 @@ Calls `scripts/ast_repair.js` as a Node.js subprocess with a JSON protocol:
 
 Strategies:
 
-| Strategy | What the AST script does |
-| --- | --- |
+| Strategy           | What the AST script does                                                             |
+| ------------------ | ------------------------------------------------------------------------------------ |
 | `selector_replace` | Finds all matching locator/getByX calls and replaces the selector argument file-wide |
-| `import_add` | Inserts a missing import declaration; merges named imports if module already present |
-| `timeout_adjust` | Finds `{ timeout: N }` properties and updates the value |
-| `role_argument` | Updates the `name` option in `getByRole()` calls |
-| `assertion_swap` | Renames an assertion method in an `expect()` chain |
+| `import_add`       | Inserts a missing import declaration; merges named imports if module already present |
+| `timeout_adjust`   | Finds `{ timeout: N }` properties and updates the value                              |
+| `role_argument`    | Updates the `name` option in `getByRole()` calls                                     |
+| `assertion_swap`   | Renames an assertion method in an `expect()` chain                                   |
 
 If AST produces 0 changes, logs a warning and falls through to Path 2.
 

@@ -23,11 +23,11 @@ This guide explains the patterns that made that possible.
 
 LLMs return text. Your program needs data. The naive approach is string parsing:
 
-```python
+````python
 # Fragile: breaks on any response variation
 json_str = response.split("```json")[1].split("```")[0]
 data = json.loads(json_str)
-```
+````
 
 This approach fails silently. If the LLM adds a preamble, changes a field name, or omits a required field, you get either a KeyError or corrupt data downstream.
 

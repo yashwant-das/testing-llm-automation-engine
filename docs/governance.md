@@ -7,19 +7,19 @@
 
 ## Sources of Truth
 
-| Question | Authoritative source |
-| --- | --- |
-| What is this project? | `README.md` |
-| How do I set it up? | `docs/development/setup.md` |
-| How does the architecture work? | `docs/architecture/` |
-| Why was X decided? | `docs/decisions.md` (ADRs) |
-| How do I add X? | `docs/development/adding-*.md` |
-| How do I debug X? | `docs/development/debugging.md` |
-| What are the environment variables? | `docs/env-variables.md` |
-| How do I run in Docker? | `docs/docker.md` |
-| What is the AI assistant expected to know? | `AGENTS.md` |
-| What's the evaluation methodology? | `docs/evaluation/` |
-| How are prompts managed? | `docs/prompts/` |
+| Question                                   | Authoritative source            |
+| ------------------------------------------ | ------------------------------- |
+| What is this project?                      | `README.md`                     |
+| How do I set it up?                        | `docs/development/setup.md`     |
+| How does the architecture work?            | `docs/architecture/`            |
+| Why was X decided?                         | `docs/decisions.md` (ADRs)      |
+| How do I add X?                            | `docs/development/adding-*.md`  |
+| How do I debug X?                          | `docs/development/debugging.md` |
+| What are the environment variables?        | `docs/env-variables.md`         |
+| How do I run in Docker?                    | `docs/docker.md`                |
+| What is the AI assistant expected to know? | `AGENTS.md`                     |
+| What's the evaluation methodology?         | `docs/evaluation/`              |
+| How are prompts managed?                   | `docs/prompts/`                 |
 
 ---
 
@@ -27,17 +27,17 @@
 
 ### When to update documentation
 
-| Event | Required action |
-| --- | --- |
-| New module added to `src/` | Update `README.md` repo structure; update `AGENTS.md` module map |
-| New environment variable | Update `docs/env-variables.md`; update `docs/development/setup.md` |
-| New LLM provider supported | Update `docs/development/adding-models.md` and `docs/env-variables.md` |
-| New repair strategy added | Update `docs/development/adding-healing-strategies.md` |
-| Architecture boundary changes | Update relevant `docs/architecture/*.md` |
-| Significant technical decision made | Add an ADR to `docs/decisions.md` |
-| UI tab renamed or added | Update `README.md`, `AGENTS.md`, `docs/docker.md` |
-| New benchmark added | Update `docs/evaluation/benchmarks.md` |
-| Prompt file changed significantly | Update `docs/prompts/healing.md` or `generation.md`; bump version in `prompts/manifest.json` |
+| Event                               | Required action                                                                              |
+| ----------------------------------- | -------------------------------------------------------------------------------------------- |
+| New module added to `src/`          | Update `README.md` repo structure; update `AGENTS.md` module map                             |
+| New environment variable            | Update `docs/env-variables.md`; update `docs/development/setup.md`                           |
+| New LLM provider supported          | Update `docs/development/adding-models.md` and `docs/env-variables.md`                       |
+| New repair strategy added           | Update `docs/development/adding-healing-strategies.md`                                       |
+| Architecture boundary changes       | Update relevant `docs/architecture/*.md`                                                     |
+| Significant technical decision made | Add an ADR to `docs/decisions.md`                                                            |
+| UI tab renamed or added             | Update `README.md`, `AGENTS.md`, `docs/docker.md`                                            |
+| New benchmark added                 | Update `docs/evaluation/benchmarks.md`                                                       |
+| Prompt file changed significantly   | Update `docs/prompts/healing.md` or `generation.md`; bump version in `prompts/manifest.json` |
 
 ### What does NOT require documentation updates
 
@@ -91,14 +91,14 @@ to know about the codebase structure and where to add new code.
 
 These patterns have caused documentation drift in this project's past. Avoid them.
 
-| Anti-pattern | Why it fails |
-| --- | --- |
-| Keeping "OPEN" items in technical debt after they are resolved | Creates false signal that problems still exist |
-| Leaving `[ ]` checkboxes in completed plans | Misleads contributors about the project's state |
-| Leaving "will be done in Phase N" comments in code after Phase N completes | Becomes noise that obscures real intent |
-| Writing architecture docs before the implementation is stable | Requires rewriting the doc when the implementation changes |
-| Creating evaluation docs without recording the decision in an ADR | Decision rationale gets lost when the evaluation doc is eventually archived |
-| Keeping SaaS marketing language in a reference implementation project | Confuses contributors about the project's purpose |
+| Anti-pattern                                                               | Why it fails                                                                |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| Keeping "OPEN" items in technical debt after they are resolved             | Creates false signal that problems still exist                              |
+| Leaving `[ ]` checkboxes in completed plans                                | Misleads contributors about the project's state                             |
+| Leaving "will be done in Phase N" comments in code after Phase N completes | Becomes noise that obscures real intent                                     |
+| Writing architecture docs before the implementation is stable              | Requires rewriting the doc when the implementation changes                  |
+| Creating evaluation docs without recording the decision in an ADR          | Decision rationale gets lost when the evaluation doc is eventually archived |
+| Keeping SaaS marketing language in a reference implementation project      | Confuses contributors about the project's purpose                           |
 
 ---
 

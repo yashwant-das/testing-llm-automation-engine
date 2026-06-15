@@ -72,15 +72,15 @@ prompts/                  # LLM system prompts (external markdown files)
 
 ## Where to Add New Code
 
-| What you're adding | Where it goes |
-| --- | --- |
-| New LLM provider | `src/llm/client.py` + `src/llm/registry.py` (see `docs/development/adding-models.md`) |
-| New repair strategy | `src/healing/repair.py` + `schemas/healing.py` + `scripts/ast_repair.js` (see `docs/development/adding-healing-strategies.md`) |
-| New benchmark | `benchmarks/<type>/` + dataset JSON (see `docs/development/adding-benchmarks.md`) |
-| New failure classification pattern | `src/healing/classifier.py` + `benchmarks/healing/fixtures/repair_scenarios.json` |
-| New UI tab | `src/services/` first, then wire in `src/app.py` |
-| New data contract | `schemas/` as a Pydantic `BaseModel` |
-| New context collector | `src/context/` + register in `src/context/collector.py` |
+| What you're adding                 | Where it goes                                                                                                                  |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| New LLM provider                   | `src/llm/client.py` + `src/llm/registry.py` (see `docs/development/adding-models.md`)                                          |
+| New repair strategy                | `src/healing/repair.py` + `schemas/healing.py` + `scripts/ast_repair.js` (see `docs/development/adding-healing-strategies.md`) |
+| New benchmark                      | `benchmarks/<type>/` + dataset JSON (see `docs/development/adding-benchmarks.md`)                                              |
+| New failure classification pattern | `src/healing/classifier.py` + `benchmarks/healing/fixtures/repair_scenarios.json`                                              |
+| New UI tab                         | `src/services/` first, then wire in `src/app.py`                                                                               |
+| New data contract                  | `schemas/` as a Pydantic `BaseModel`                                                                                           |
+| New context collector              | `src/context/` + register in `src/context/collector.py`                                                                        |
 
 **Do not add logic to `src/agents/`.** This package contains the public pipeline entry
 points (`generator.py`, `healer.py`) and the CLI interface for the healer. New pipeline

@@ -83,13 +83,13 @@ Full repair checks:
 
 Evaluates generated test quality with lexical checks:
 
-| Check | What it verifies |
-| --- | --- |
-| `must_import` | Required import strings appear in the code |
-| `must_use_assertions` | At least one `expect()` call |
-| `must_not_use_deprecated` | `waitForSelector` absent |
-| `must_contain_url` | Target URL referenced in the test |
-| `preferred_locators` | `getByRole` or `getByLabel` used |
+| Check                     | What it verifies                           |
+| ------------------------- | ------------------------------------------ |
+| `must_import`             | Required import strings appear in the code |
+| `must_use_assertions`     | At least one `expect()` call               |
+| `must_not_use_deprecated` | `waitForSelector` absent                   |
+| `must_contain_url`        | Target URL referenced in the test          |
+| `preferred_locators`      | `getByRole` or `getByLabel` used           |
 
 These are **lexical** checks — they inspect the text of the generated TypeScript without parsing or running it. Fast and dependency-free.
 
