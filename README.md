@@ -407,3 +407,5 @@ Start at the **[Documentation Hub (`docs/README.md`)](docs/README.md)**, which i
 - **"I want to understand why decisions were made"** (ADRs)
 - **"I want to contribute or extend it"** (Adding models, repair strategies)
 - **"I want to understand the evaluation methodology"** (Benchmarks & scoring)
+
+Last updated: 2026-06-25
